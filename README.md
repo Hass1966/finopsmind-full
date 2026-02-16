@@ -1,0 +1,2 @@
+# finopsmind-full
+AI FinOps
