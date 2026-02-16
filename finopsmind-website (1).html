@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinOpsMind | AI-Powered Cloud Cost Intelligence</title>
+    <meta name="description" content="The proactive FinOps platform that predicts cost spikes before they hit your bill.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>:root {
+    --bg-primary: #060a11;
+    --bg-secondary: #0b1120;
+    --bg-tertiary: #111827;
+    --bg-card: #161f2e;
+    --bg-elevated: #1e293b;
+    --accent-primary: #00d8a4;
+    --accent-secondary: #00b8e6;
+    --accent-warning: #ffa726;
+    --accent-danger: #ef5350;
+    --accent-purple: #9c7cf4;
+    --gradient-hero: linear-gradient(135deg, #00d8a4 0%, #00b8e6 50%, #9c7cf4 100%);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --font-display: 'Cabinet Grotesk', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-body); background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
+
+/* Background */
+.bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(0,216,164,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,216,164,0.02) 1px, transparent 1px); background-size: 80px 80px; pointer-events: none; z-index: 0; }
+.bg-glow-1 { position: fixed; top: -200px; right: -200px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(0,216,164,0.06) 0%, transparent 60%); pointer-events: none; }
+.bg-glow-2 { position: fixed; bottom: -300px; left: -300px; width: 900px; height: 900px; background: radial-gradient(circle, rgba(156,124,244,0.04) 0%, transparent 60%); pointer-events: none; }
+
+/* Nav */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 1rem 2rem; background: rgba(6,10,17,0.85); backdrop-filter: blur(24px); border-bottom: 1px solid rgba(255,255,255,0.04); transition: all 0.3s; }
+.nav.scrolled { background: rgba(6,10,17,0.95); box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+.nav-container { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.logo { display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; text-decoration: none; color: var(--text-primary); }
+.logo-icon { width: 38px; height: 38px; background: var(--gradient-hero); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.logo-text span { background: var(--gradient-hero); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: color 0.2s; }
+.nav-links a:hover { color: var(--accent-primary); }
+.nav-cta { display: flex; gap: 0.75rem; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.5rem; border-radius: 10px; font-family: var(--font-body); font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer; border: none; transition: all 0.3s; }
+.btn-primary { background: var(--gradient-hero); color: var(--bg-primary); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,216,164,0.3); }
+.btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); }
+.btn-secondary:hover { border-color: var(--accent-primary); background: var(--bg-elevated); }
+.btn-large { padding: 1rem 2.5rem; font-size: 1.05rem; border-radius: 14px; }
+.btn-ghost { background: transparent; color: var(--text-secondary); padding: 0.5rem 1rem; }
+.btn-ghost:hover { color: var(--accent-primary); }
+
+/* Sections */
+.section-container { max-width: 1400px; margin: 0 auto; }
+.section-header { text-align: center; margin-bottom: 4rem; }
+.section-tag { display: inline-block; padding: 0.3rem 1.2rem; background: rgba(0,216,164,0.08); border: 1px solid rgba(0,216,164,0.15); border-radius: 100px; font-size: 0.78rem; font-weight: 600; color: var(--accent-primary); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 1.25rem; }
+.section-title { font-family: var(--font-display); font-size: 3rem; font-weight: 800; margin-bottom: 1rem; letter-spacing: -0.02em; }
+.section-subtitle { font-size: 1.15rem; color: var(--text-secondary); max-width: 680px; margin: 0 auto; line-height: 1.7; }
+
+/* Hero */
+.hero { min-height: 100vh; padding: 140px 2rem 4rem; display: flex; align-items: center; position: relative; }
+.hero::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 1200px; height: 600px; background: radial-gradient(ellipse at center top, rgba(0,216,164,0.08) 0%, rgba(0,184,230,0.04) 40%, transparent 70%); pointer-events: none; }
+.hero-container { max-width: 1400px; margin: 0 auto; width: 100%; display: grid; grid-template-columns: 1fr 1.1fr; gap: 5rem; align-items: center; position: relative; z-index: 1; }
+.hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 1rem; background: rgba(0,216,164,0.08); border: 1px solid rgba(0,216,164,0.2); border-radius: 100px; font-size: 0.82rem; color: var(--accent-primary); margin-bottom: 1.5rem; }
+.hero-badge-dot { width: 8px; height: 8px; background: var(--accent-primary); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.hero h1 { font-family: var(--font-display); font-size: 3.8rem; font-weight: 800; line-height: 1.08; margin-bottom: 1.5rem; letter-spacing: -0.03em; }
+.hero h1 .gradient-text { background: var(--gradient-hero); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-subtitle { font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2.5rem; max-width: 520px; line-height: 1.75; }
+.hero-cta { display: flex; gap: 1rem; margin-bottom: 3.5rem; }
+.hero-stats { display: flex; gap: 3.5rem; }
+.stat-value { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; background: var(--gradient-hero); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+/* Demo browser */
+.demo-browser { background: var(--bg-card); border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 30px 80px -20px rgba(0,0,0,0.6), 0 0 120px -60px rgba(0,216,164,0.2); animation: float 8s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.demo-titlebar { background: var(--bg-tertiary); padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.demo-dots { display: flex; gap: 6px; }
+.demo-dots span { width: 11px; height: 11px; border-radius: 50%; }
+.demo-dots span:nth-child(1) { background: #ef5350; }
+.demo-dots span:nth-child(2) { background: #ffa726; }
+.demo-dots span:nth-child(3) { background: #66bb6a; }
+.demo-url { flex: 1; background: var(--bg-primary); padding: 5px 14px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
+.demo-body { display: flex; height: 420px; }
+.demo-sidebar { width: 175px; background: #141b2b; padding: 1rem 0.75rem; border-right: 1px solid rgba(255,255,255,0.04); flex-shrink: 0; }
+.demo-sidebar-brand { padding: 0 0.5rem 1rem; font-family: var(--font-display); font-weight: 800; font-size: 0.95rem; color: var(--accent-primary); }
+.demo-sidebar-brand small { display: block; font-family: var(--font-body); font-weight: 400; font-size: 0.65rem; color: var(--text-muted); }
+.demo-nav-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.6rem; margin-bottom: 2px; border-radius: 8px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+.demo-nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+.demo-nav-item.active { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.demo-nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.demo-main { flex: 1; overflow-y: auto; overflow-x: hidden; background: #f8fafc; }
+.demo-panel { display: none; height: 100%; }
+.demo-panel.active { display: block; animation: fadeSlide 0.3s ease; }
+@keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Demo panel inner */
+.dp-header { padding: 1.25rem 1.5rem 0; }
+.dp-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+.dp-desc { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+.dp-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; padding: 0.75rem 1.5rem 0; }
+.dp-card { background: white; border-radius: 10px; padding: 0.7rem 0.9rem; border: 1px solid #e2e8f0; position: relative; }
+.dp-card-label { font-size: 0.6rem; color: #94a3b8; font-weight: 500; }
+.dp-card-value { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-top: 1px; }
+.dp-card-icon { position: absolute; top: 0.7rem; right: 0.9rem; width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; }
+.dp-card-change { font-size: 0.58rem; color: var(--accent-danger); margin-top: 1px; }
+
+/* Charts */
+.dp-charts { display: grid; grid-template-columns: 1.3fr 1fr; gap: 0.6rem; padding: 0.6rem 1.5rem; }
+.dp-chart-box { background: white; border-radius: 10px; padding: 0.8rem; border: 1px solid #e2e8f0; }
+.dp-chart-title { font-size: 0.72rem; font-weight: 600; color: #334155; margin-bottom: 0.4rem; }
+
+/* Bottom panels */
+.dp-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; padding: 0 1.5rem 0.75rem; }
+.dp-bottom-panel { background: white; border-radius: 10px; padding: 0.7rem 0.9rem; border: 1px solid #e2e8f0; }
+.dp-bottom-title { font-size: 0.72rem; font-weight: 600; color: #334155; margin-bottom: 0.4rem; }
+.dp-anomaly-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.65rem; }
+.dp-anomaly-row:last-child { border: none; }
+.dp-badge { padding: 1px 6px; border-radius: 4px; font-size: 0.55rem; font-weight: 600; }
+.dp-badge.critical { background: #fef2f2; color: #dc2626; }
+.dp-badge.high { background: #fff7ed; color: #ea580c; }
+.dp-rec-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.65rem; }
+.dp-rec-row:last-child { border: none; }
+.dp-rec-savings { color: #16a34a; font-family: var(--font-mono); font-weight: 600; font-size: 0.63rem; }
+
+/* Tables */
+.dp-table-wrap { padding: 0 1.5rem 0.75rem; overflow: hidden; }
+.dp-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+.dp-table th { background: #f8fafc; padding: 0.45rem 0.6rem; text-align: left; font-size: 0.55rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
+.dp-table td { padding: 0.4rem 0.6rem; font-size: 0.63rem; color: #334155; border-bottom: 1px solid #f1f5f9; }
+.td-red { color: #dc2626; font-weight: 500; }
+.td-green { color: #16a34a; font-weight: 600; }
+.td-blue { color: #2563eb; }
+.sev-badge { padding: 1px 5px; border-radius: 4px; font-size: 0.52rem; font-weight: 600; }
+.sev-critical { background: #fef2f2; color: #dc2626; }
+.sev-high { background: #fff7ed; color: #ea580c; }
+.sev-medium { background: #fefce8; color: #ca8a04; }
+.sev-low { background: #f0fdf4; color: #16a34a; }
+.stat-badge { padding: 1px 5px; border-radius: 4px; font-size: 0.52rem; font-weight: 500; }
+.stat-open { background: #eff6ff; color: #2563eb; }
+.stat-investigating { background: #fef3c7; color: #d97706; }
+.stat-acknowledged { background: #f3e8ff; color: #9333ea; }
+.stat-resolved { background: #f0fdf4; color: #16a34a; }
+.stat-pending { background: #fef2f2; color: #dc2626; }
+.imp-badge { padding: 1px 5px; border-radius: 10px; font-size: 0.52rem; font-weight: 500; }
+.imp-high { background: #fef2f2; color: #dc2626; }
+.imp-medium { background: #fefce8; color: #ca8a04; }
+
+/* Bar chart */
+.dp-bar-chart { display: flex; align-items: flex-end; gap: 5px; height: 80px; padding: 0 1.5rem; }
+.dp-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.dp-bar { width: 100%; background: #86efac; border-radius: 3px 3px 0 0; min-height: 3px; }
+.dp-bar-label { font-size: 0.45rem; color: #64748b; text-align: center; white-space: nowrap; }
+.dp-filter-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1.5rem; }
+.dp-filter-select { padding: 2px 7px; background: white; border: 1px solid #e2e8f0; border-radius: 5px; font-size: 0.6rem; color: #334155; }
+.dp-filter-count { margin-left: auto; font-size: 0.6rem; color: #94a3b8; }
+
+/* Showcase */
+.showcase { padding: 7rem 2rem; background: var(--bg-secondary); position: relative; }
+.showcase::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(0,216,164,0.3), transparent); }
+.showcase-tabs { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 3rem; flex-wrap: wrap; }
+.showcase-tab { padding: 0.6rem 1.5rem; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.05); border-radius: 100px; font-family: var(--font-body); font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+.showcase-tab:hover, .showcase-tab.active { background: rgba(0,216,164,0.1); border-color: rgba(0,216,164,0.3); color: var(--accent-primary); }
+.showcase-content { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; max-width: 1400px; margin: 0 auto; }
+.showcase-text h3 { font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 1rem; }
+.showcase-text .hl { color: var(--accent-primary); }
+.showcase-text p { color: var(--text-secondary); font-size: 1.02rem; line-height: 1.8; margin-bottom: 1.25rem; }
+.showcase-feature-list { list-style: none; margin-top: 1.25rem; }
+.showcase-feature-list li { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.4rem 0; font-size: 0.92rem; color: var(--text-secondary); }
+.showcase-feature-list li::before { content: '✓'; color: var(--accent-primary); font-weight: 700; flex-shrink: 0; }
+.showcase-stats { display: flex; gap: 2rem; margin-top: 1.75rem; }
+.showcase-stat-value { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; color: var(--accent-primary); }
+.showcase-stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+.showcase-browser { background: var(--bg-card); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); overflow: hidden; box-shadow: 0 20px 60px -20px rgba(0,0,0,0.5); }
+.showcase-panel { display: none; }
+.showcase-panel.active { display: block; animation: fadeSlide 0.4s ease; }
+
+/* Features */
+.features { padding: 7rem 2rem; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.feature-card { background: var(--bg-card); border-radius: 20px; padding: 2rem; border: 1px solid rgba(255,255,255,0.04); transition: all 0.4s; position: relative; overflow: hidden; }
+.feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-hero); opacity: 0; transition: opacity 0.3s; }
+.feature-card:hover { border-color: rgba(0,216,164,0.15); transform: translateY(-4px); }
+.feature-card:hover::before { opacity: 1; }
+.feature-icon { width: 52px; height: 52px; border-radius: 14px; background: rgba(0,216,164,0.08); border: 1px solid rgba(0,216,164,0.12); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1.25rem; }
+.feature-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; }
+.feature-desc { font-size: 0.92rem; color: var(--text-secondary); line-height: 1.65; }
+
+/* Comparison */
+.comparison { padding: 7rem 2rem; background: var(--bg-secondary); }
+.comp-table { background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.04); margin-top: 3rem; }
+.comp-table table { width: 100%; border-collapse: collapse; }
+.comp-table th { padding: 1.25rem 1.5rem; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; background: var(--bg-tertiary); }
+.comp-table th:first-child { text-align: left; }
+.comp-table th.hl { background: rgba(0,216,164,0.08); color: var(--accent-primary); }
+.comp-table td { padding: 1rem 1.5rem; text-align: center; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.comp-table td:first-child { text-align: left; font-weight: 500; }
+.comp-table td.hl { background: rgba(0,216,164,0.03); }
+.c-yes { color: var(--accent-primary); }
+.c-no { color: var(--accent-danger); }
+.c-part { color: var(--accent-warning); }
+.c-excl { display: inline-flex; padding: 2px 10px; background: rgba(0,216,164,0.1); border-radius: 100px; font-size: 0.72rem; font-weight: 600; color: var(--accent-primary); }
+
+/* Pricing */
+.pricing { padding: 7rem 2rem; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3rem; }
+.pricing-card { background: var(--bg-card); border-radius: 20px; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s; }
+.pricing-card.featured { border-color: rgba(0,216,164,0.3); position: relative; box-shadow: 0 0 60px -20px rgba(0,216,164,0.15); }
+.pricing-card.featured::before { content: 'Most Popular'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 4px 16px; background: var(--gradient-hero); border-radius: 100px; font-size: 0.72rem; font-weight: 700; color: var(--bg-primary); }
+.pricing-tier { font-size: 0.75rem; font-weight: 600; color: var(--accent-primary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+.price-value { font-family: var(--font-display); font-size: 2.5rem; font-weight: 800; }
+.price-period { font-size: 1rem; color: var(--text-muted); }
+.pricing-desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6; margin-top: 0.5rem; }
+.pricing-features { list-style: none; margin-bottom: 2rem; }
+.pricing-features li { padding: 0.4rem 0; font-size: 0.88rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem; }
+.pricing-features li::before { content: '✓'; color: var(--accent-primary); font-weight: 700; }
+
+/* CTA */
+.cta { padding: 6rem 2rem; text-align: center; position: relative; }
+.cta::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 600px; height: 400px; background: radial-gradient(ellipse, rgba(0,216,164,0.06) 0%, transparent 70%); }
+.cta-content { position: relative; z-index: 1; max-width: 700px; margin: 0 auto; }
+.cta h2 { font-family: var(--font-display); font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem; }
+.cta p { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 2.5rem; line-height: 1.7; }
+.cta-buttons { display: flex; gap: 1rem; justify-content: center; }
+
+/* Footer */
+.footer { padding: 4rem 2rem 2rem; border-top: 1px solid rgba(255,255,255,0.04); }
+.footer-grid { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+.footer-brand p { color: var(--text-muted); font-size: 0.88rem; margin-top: 1rem; line-height: 1.6; max-width: 300px; }
+.footer-col h4 { font-family: var(--font-display); font-weight: 700; margin-bottom: 1rem; font-size: 0.9rem; }
+.footer-col ul { list-style: none; }
+.footer-col li { margin-bottom: 0.4rem; }
+.footer-col a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+.footer-col a:hover { color: var(--accent-primary); }
+.footer-bottom { max-width: 1400px; margin: 0 auto; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); }
+
+/* Reveal animation */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .hero-container, .showcase-content { grid-template-columns: 1fr; gap: 3rem; }
+    .hero h1 { font-size: 2.8rem; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+    .nav-links, .nav-cta { display: none; }
+    .hero h1 { font-size: 2.2rem; }
+    .section-title { font-size: 2rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .dp-cards { grid-template-columns: repeat(2, 1fr); }
+    .demo-sidebar { width: 130px; }
+    .hero-stats { gap: 2rem; flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow-1"></div>
+<div class="bg-glow-2"></div>
+
+<!-- NAV -->
+<nav class="nav" id="mainNav">
+    <div class="nav-container">
+        <a href="#" class="logo"><div class="logo-icon">📊</div><div class="logo-text">FinOps<span>Mind</span></div></a>
+        <ul class="nav-links">
+            <li><a href="#showcase">Product</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#comparison">Compare</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+        </ul>
+        <div class="nav-cta">
+            <a href="#" class="btn btn-ghost">Log In</a>
+            <a href="#" class="btn btn-primary">Start Free Trial</a>
+        </div>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-container">
+        <div class="hero-text">
+            <div class="hero-badge"><span class="hero-badge-dot"></span> Now with Prophet ML Forecasting</div>
+            <h1>Stop Reacting to<br>Cloud Costs.<br><span class="gradient-text">Start Predicting Them.</span></h1>
+            <p class="hero-subtitle">FinOpsMind uses machine learning to detect anomalies, forecast spend, and generate actionable recommendations&mdash;before cost spikes hit your bill.</p>
+            <div class="hero-cta">
+                <a href="#" class="btn btn-primary btn-large">Start 14-Day Free Trial</a>
+                <a href="#showcase" class="btn btn-secondary btn-large">See It In Action &darr;</a>
+            </div>
+            <div class="hero-stats">
+                <div><div class="stat-value">$3,925</div><div class="stat-label">Monthly savings found</div></div>
+                <div><div class="stat-value">92%</div><div class="stat-label">Forecast confidence</div></div>
+                <div><div class="stat-value">13</div><div class="stat-label">Anomalies caught</div></div>
+            </div>
+        </div>
+
+        <!-- INTERACTIVE HERO DEMO -->
+        <div class="demo-browser" id="heroDemoBrowser">
+            <div class="demo-titlebar">
+                <div class="demo-dots"><span></span><span></span><span></span></div>
+                <div class="demo-url" id="heroUrl">app.finopsmind.ai/dashboard</div>
+            </div>
+            <div class="demo-body">
+                <div class="demo-sidebar">
+                    <div class="demo-sidebar-brand">FinOpsMind<small>Cloud Cost Intelligence</small></div>
+                    <div class="demo-nav-item active" data-panel="hero-dashboard" data-url="app.finopsmind.ai/dashboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        Dashboard
+                    </div>
+                    <div class="demo-nav-item" data-panel="hero-costs" data-url="app.finopsmind.ai/costs">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        Costs
+                    </div>
+                    <div class="demo-nav-item" data-panel="hero-anomalies" data-url="app.finopsmind.ai/anomalies">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Anomalies
+                    </div>
+                    <div class="demo-nav-item" data-panel="hero-forecasts" data-url="app.finopsmind.ai/forecasts">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Forecasts
+                    </div>
+                    <div class="demo-nav-item" data-panel="hero-recs" data-url="app.finopsmind.ai/recommendations">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        Recommendations
+                    </div>
+                    <div class="demo-nav-item" data-panel="hero-dashboard" data-url="app.finopsmind.ai/settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4"/></svg>
+                        Settings
+                    </div>
+                </div>
+                <div class="demo-main">
+<svg width="0" height="0"><defs>
+<linearGradient id="cg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient>
+<linearGradient id="confBand" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#22c55e" stop-opacity="0.15"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0.02"/></linearGradient>
+</defs></svg>
+<div class="demo-panel active" id="hero-dashboard">
+    <div class="dp-header"><div class="dp-title">Dashboard</div></div>
+    <div class="dp-cards">
+        <div class="dp-card"><div class="dp-card-label">Total Costs (30d)</div><div class="dp-card-value">$4,850</div><div class="dp-card-change">&blacktriangle; 15.5%</div><div class="dp-card-icon" style="background:#eff6ff;color:#3b82f6">$</div></div>
+        <div class="dp-card"><div class="dp-card-label">Active Anomalies</div><div class="dp-card-value">5</div><div class="dp-card-icon" style="background:#fef3c7;color:#f59e0b">&triangle;</div></div>
+        <div class="dp-card"><div class="dp-card-label">Budgets</div><div class="dp-card-value">6 active</div><div class="dp-card-label" style="font-size:0.55rem;color:#ea580c">1 exceeded</div></div>
+        <div class="dp-card"><div class="dp-card-label">Potential Savings</div><div class="dp-card-value" style="color:#16a34a">$3,925.02</div></div>
+    </div>
+    <div class="dp-charts">
+        <div class="dp-chart-box"><div class="dp-chart-title">Cost Trend</div><svg viewBox="0 0 400 80" width="100%" height="70" preserveAspectRatio="none">
+<path d="M0 45 L30 50 L60 35 L90 40 L120 30 L150 35 L180 25 L210 38 L240 30 L270 35 L300 28 L330 20 L360 22 L400 15" fill="none" stroke="#3b82f6" stroke-width="2"/>
+<path d="M0 45 L30 50 L60 35 L90 40 L120 30 L150 35 L180 25 L210 38 L240 30 L270 35 L300 28 L330 20 L360 22 L400 15 L400 80 L0 80Z" fill="url(#cg1)"/>
+</svg></div>
+        <div class="dp-chart-box"><div class="dp-chart-title">Cost by Service</div><div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.3rem"><svg viewBox="0 0 100 100" width="72" height="72">
+<circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="20" stroke-dasharray="130.9 120" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" stroke-width="20" stroke-dasharray="62.8 188" stroke-dashoffset="-130.9" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" stroke-width="20" stroke-dasharray="20.1 231" stroke-dashoffset="-193.7" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" stroke-width="20" stroke-dasharray="17.6 233" stroke-dashoffset="-213.8" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="30" fill="#f8fafc"/>
+</svg><div style="font-size:0.55rem;color:#64748b;line-height:1.8">
+<div><span style="color:#3b82f6">&bull;</span> EC2 52%</div>
+<div><span style="color:#22c55e">&bull;</span> RDS 25%</div>
+<div><span style="color:#f59e0b">&bull;</span> S3 8%</div>
+<div><span style="color:#ef4444">&bull;</span> Lambda 7%</div>
+</div></div></div>
+    </div>
+    <div class="dp-bottom">
+        <div class="dp-bottom-panel"><div class="dp-bottom-title">Recent Anomalies</div>
+            <div class="dp-anomaly-row"><span>EC2 <small style="color:#94a3b8">2/7/2026</small></span><span style="color:#dc2626">+264.3%</span><span class="dp-badge critical">critical</span></div>
+            <div class="dp-anomaly-row"><span>Data Transfer <small style="color:#94a3b8">2/7/2026</small></span><span style="color:#dc2626">+273.3%</span><span class="dp-badge critical">critical</span></div>
+            <div class="dp-anomaly-row"><span>RDS <small style="color:#94a3b8">2/6/2026</small></span><span style="color:#ea580c">+91.7%</span><span class="dp-badge high">high</span></div>
+            <div class="dp-anomaly-row"><span>Lambda <small style="color:#94a3b8">2/6/2026</small></span><span style="color:#ea580c">+145.3%</span><span class="dp-badge high">high</span></div>
+        </div>
+        <div class="dp-bottom-panel"><div class="dp-bottom-title">Top Recommendations</div>
+            <div class="dp-rec-row"><span>EC2 &mdash; Rightsizing</span><span class="dp-rec-savings">$70.08/mo</span></div>
+            <div class="dp-rec-row"><span>EC2 &mdash; Idle Resource</span><span class="dp-rec-savings">$60.74/mo</span></div>
+            <div class="dp-rec-row"><span>EC2 &mdash; Modernization</span><span class="dp-rec-savings">$22/mo</span></div>
+            <div class="dp-rec-row"><span>EC2 &mdash; Spot Instance</span><span class="dp-rec-savings">$85/mo</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="demo-panel" id="hero-costs">
+    <div class="dp-header"><div class="dp-title">Cost Analysis</div><div class="dp-desc">Detailed breakdown of your cloud spending</div></div>
+    <div class="dp-cards">
+        <div class="dp-card"><div class="dp-card-label">Total Spend</div><div class="dp-card-value">$4,850</div><div class="dp-card-change">&blacktriangle; 15.5%</div></div>
+        <div class="dp-card"><div class="dp-card-label">Daily Average</div><div class="dp-card-value">$161.67</div></div>
+        <div class="dp-card"><div class="dp-card-label">Top Service</div><div class="dp-card-value">EC2</div><div class="dp-card-label">$2,522</div></div>
+        <div class="dp-card"><div class="dp-card-label">Services Used</div><div class="dp-card-value">6</div></div>
+    </div>
+    <div style="padding:0.6rem 1.5rem"><div class="dp-chart-box"><div class="dp-chart-title">Daily Cost Trend</div><svg viewBox="0 0 400 80" width="100%" height="70" preserveAspectRatio="none">
+<path d="M0 45 L30 50 L60 35 L90 40 L120 30 L150 35 L180 25 L210 38 L240 30 L270 35 L300 28 L330 20 L360 22 L400 15" fill="none" stroke="#3b82f6" stroke-width="2"/>
+<path d="M0 45 L30 50 L60 35 L90 40 L120 30 L150 35 L180 25 L210 38 L240 30 L270 35 L300 28 L330 20 L360 22 L400 15 L400 80 L0 80Z" fill="url(#cg1)"/>
+</svg></div></div>
+    <div class="dp-charts">
+        <div class="dp-chart-box"><div class="dp-chart-title">Cost Distribution</div><div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.3rem"><svg viewBox="0 0 100 100" width="72" height="72">
+<circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="20" stroke-dasharray="130.9 120" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" stroke-width="20" stroke-dasharray="62.8 188" stroke-dashoffset="-130.9" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" stroke-width="20" stroke-dasharray="20.1 231" stroke-dashoffset="-193.7" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" stroke-width="20" stroke-dasharray="17.6 233" stroke-dashoffset="-213.8" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="30" fill="#f8fafc"/>
+</svg><div style="font-size:0.55rem;color:#64748b;line-height:1.8">
+<div><span style="color:#3b82f6">&bull;</span> EC2 52%</div>
+<div><span style="color:#22c55e">&bull;</span> RDS 25%</div>
+<div><span style="color:#f59e0b">&bull;</span> S3 8%</div>
+<div><span style="color:#ef4444">&bull;</span> Lambda 7%</div>
+</div></div></div>
+        <div class="dp-chart-box"><div class="dp-chart-title">Service Breakdown</div>
+            <div style="font-size:0.6rem;color:#334155;margin-top:0.4rem">
+                <div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid #f1f5f9"><span><span style="color:#3b82f6">&bull;</span> EC2</span><span style="font-weight:600">$2,522 &mdash; 52.0%</span></div>
+                <div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid #f1f5f9"><span><span style="color:#22c55e">&bull;</span> RDS</span><span style="font-weight:600">$1,212.5 &mdash; 25.0%</span></div>
+                <div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid #f1f5f9"><span><span style="color:#f59e0b">&bull;</span> S3</span><span style="font-weight:600">$388 &mdash; 8.0%</span></div>
+                <div style="display:flex;justify-content:space-between;padding:0.25rem 0"><span><span style="color:#ef4444">&bull;</span> Lambda</span><span style="font-weight:600">$339.5 &mdash; 7.0%</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="demo-panel" id="hero-anomalies">
+    <div class="dp-header"><div class="dp-title">Anomaly Detection</div><div class="dp-desc">AI-detected cost anomalies and unusual spending patterns</div></div>
+    <div class="dp-cards">
+        <div class="dp-card"><div class="dp-card-label">Total Anomalies</div><div class="dp-card-value">13</div></div>
+        <div class="dp-card"><div class="dp-card-label">Critical</div><div class="dp-card-value" style="color:#dc2626">2</div></div>
+        <div class="dp-card"><div class="dp-card-label">Open</div><div class="dp-card-value" style="color:#2563eb">5</div></div>
+        <div class="dp-card"><div class="dp-card-label">Resolved</div><div class="dp-card-value" style="color:#16a34a">6</div></div>
+    </div>
+    <div class="dp-table-wrap">
+        <table class="dp-table">
+            <thead><tr><th>Date</th><th>Service</th><th>Expected</th><th>Actual</th><th>Deviation</th><th>Severity</th><th>Status</th></tr></thead>
+            <tbody><tr><td>2/7/2026</td><td><strong>EC2</strong></td><td>$245</td><td class="td-red">$892.5</td><td class="td-red">+264.3%</td><td><span class="sev-badge sev-critical">critical</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/7/2026</td><td><strong>Data Transfer</strong></td><td>$42</td><td class="td-red">$156.8</td><td class="td-red">+273.3%</td><td><span class="sev-badge sev-critical">critical</span></td><td><span class="stat-badge stat-investigating">investigating</span></td></tr><tr><td>2/6/2026</td><td><strong>RDS</strong></td><td>$180</td><td class="td-red">$345</td><td class="td-red">+91.7%</td><td><span class="sev-badge sev-high">high</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/6/2026</td><td><strong>Lambda</strong></td><td>$32</td><td class="td-red">$78.5</td><td class="td-red">+145.3%</td><td><span class="sev-badge sev-high">high</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/5/2026</td><td><strong>EBS</strong></td><td>$120</td><td class="td-red">$234</td><td class="td-red">+95.0%</td><td><span class="sev-badge sev-high">high</span></td><td><span class="stat-badge stat-acknowledged">acknowledged</span></td></tr><tr><td>2/4/2026</td><td><strong>CloudWatch</strong></td><td>$22</td><td class="td-red">$45.6</td><td class="td-red">+107.3%</td><td><span class="sev-badge sev-medium">medium</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/4/2026</td><td><strong>S3</strong></td><td>$55</td><td class="td-red">$89</td><td class="td-red">+61.8%</td><td><span class="sev-badge sev-medium">medium</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/3/2026</td><td><strong>ElastiCache</strong></td><td>$38</td><td class="td-red">$67.8</td><td class="td-red">+78.4%</td><td><span class="sev-badge sev-medium">medium</span></td><td><span class="stat-badge stat-resolved">resolved</span></td></tr><tr><td>2/2/2026</td><td><strong>SNS</strong></td><td>$12</td><td class="td-red">$23.4</td><td class="td-red">+95.0%</td><td><span class="sev-badge sev-low">low</span></td><td><span class="stat-badge stat-resolved">resolved</span></td></tr><tr><td>2/1/2026</td><td><strong>SQS</strong></td><td>$20</td><td class="td-red">$34.2</td><td class="td-red">+71.0%</td><td><span class="sev-badge sev-low">low</span></td><td><span class="stat-badge stat-resolved">resolved</span></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="demo-panel" id="hero-forecasts">
+    <div class="dp-header"><div class="dp-title">Cost Forecasting</div><div class="dp-desc">ML-powered predictions for future cloud spending</div></div>
+    <div class="dp-cards">
+        <div class="dp-card"><div class="dp-card-label">7-Day Forecast</div><div class="dp-card-value">$5,322</div></div>
+        <div class="dp-card"><div class="dp-card-label">Avg Daily Predicted</div><div class="dp-card-value">$177.40</div></div>
+        <div class="dp-card"><div class="dp-card-label">Confidence Level</div><div class="dp-card-value" style="color:#16a34a">92%</div></div>
+        <div class="dp-card"><div class="dp-card-label">Model</div><div class="dp-card-value" style="font-size:0.85rem">prophet-1.2</div></div>
+    </div>
+    <div style="padding:0.6rem 1.5rem">
+        <div class="dp-chart-box" style="min-height:100px;position:relative">
+            <div class="dp-chart-title">Cost Forecast with Confidence Interval</div>
+            <div style="position:absolute;top:0.6rem;right:0.8rem;font-size:0.55rem;color:#16a34a;display:flex;align-items:center;gap:3px">&#x1F4C8; Model: prophet-1.2</div>
+            <svg viewBox="0 0 500 80" width="100%" height="70" preserveAspectRatio="none">
+                <path d="M250 42 Q300 38 350 33 Q400 28 450 22 Q475 18 500 12 L500 62 Q475 56 450 52 Q400 48 350 45 Q300 43 250 42 Z" fill="url(#confBand)"/>
+                <path d="M0 55 L50 50 L100 58 L150 45 L200 47 L250 42" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+                <path d="M250 42 Q300 38 350 33 Q400 28 450 22 Q475 18 500 12" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="6,3"/>
+                <line x1="250" y1="5" x2="250" y2="75" stroke="#94a3b8" stroke-width="0.5" stroke-dasharray="3,3"/>
+                <circle cx="250" cy="42" r="3" fill="#3b82f6" stroke="white" stroke-width="1.5"/>
+            </svg>
+        </div>
+    </div>
+    <div style="padding:0 1.5rem 0.5rem"><div class="dp-chart-title">Daily Predictions</div></div>
+    <div class="dp-table-wrap" style="padding-top:0">
+        <table class="dp-table">
+            <thead><tr><th>Date</th><th>Predicted Cost</th><th>Lower Bound</th><th>Upper Bound</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td>2/9/2026</td><td class="td-green">$165.8</td><td>$140.93</td><td>$190.67</td><td>&plusmn;$24.87</td></tr>
+                <tr><td>2/10/2026</td><td class="td-green">$166.6</td><td>$141.61</td><td>$191.59</td><td>&plusmn;$24.99</td></tr>
+                <tr><td>2/11/2026</td><td class="td-green">$167.4</td><td>$142.29</td><td>$192.51</td><td>&plusmn;$25.11</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="demo-panel" id="hero-recs">
+    <div class="dp-header"><div class="dp-title">Cost Optimization</div><div class="dp-desc">AI-powered recommendations to reduce cloud spending</div></div>
+    <div class="dp-cards">
+        <div class="dp-card"><div class="dp-card-label">Total Recommendations</div><div class="dp-card-value">19</div></div>
+        <div class="dp-card"><div class="dp-card-label">Potential Savings</div><div class="dp-card-value" style="color:#16a34a;font-size:0.95rem">$3,925.02/mo</div></div>
+        <div class="dp-card"><div class="dp-card-label">High Impact</div><div class="dp-card-value">12</div></div>
+        <div class="dp-card"><div class="dp-card-label">Implemented</div><div class="dp-card-value">1</div></div>
+    </div>
+    <div style="padding:0.4rem 1.5rem"><div class="dp-chart-title">Savings by Recommendation Type</div></div>
+    <div class="dp-bar-chart">
+        <div class="dp-bar-group"><div class="dp-bar" style="height:48px"></div><div class="dp-bar-label">rightsizing</div></div>
+        <div class="dp-bar-group"><div class="dp-bar" style="height:15px"></div><div class="dp-bar-label">idle</div></div>
+        <div class="dp-bar-group"><div class="dp-bar" style="height:25px"></div><div class="dp-bar-label">modernize</div></div>
+        <div class="dp-bar-group"><div class="dp-bar" style="height:38px"></div><div class="dp-bar-label">spot</div></div>
+        <div class="dp-bar-group"><div class="dp-bar" style="height:72px"></div><div class="dp-bar-label">commit</div></div>
+        <div class="dp-bar-group"><div class="dp-bar" style="height:18px"></div><div class="dp-bar-label">storage</div></div>
+        <div class="dp-bar-group"><div class="dp-bar" style="height:6px"></div><div class="dp-bar-label">network</div></div>
+    </div>
+    <div class="dp-filter-row"><span style="color:#94a3b8">&#9660;</span><span class="dp-filter-select">All Types &blacktriangledown;</span><span class="dp-filter-select">All Impact Levels &blacktriangledown;</span><span class="dp-filter-count">19 recommendations</span></div>
+    <div class="dp-table-wrap" style="padding-top:0">
+        <table class="dp-table">
+            <thead><tr><th>Resource</th><th>Type</th><th>Current</th><th>Recommended</th><th>Savings</th><th>Impact</th><th>Status</th></tr></thead>
+            <tbody><tr><td><strong>EC2</strong><br><span style="font-size:0.5rem;color:#94a3b8">i-0a1b2c3d4e5f6789a</span></td><td>Rightsizing</td><td>m5.xlarge</td><td class="td-blue">m5.large</td><td class="td-green">$70.08/mo</td><td><span class="imp-badge imp-high">high impact</span></td><td><span class="stat-badge stat-pending">pending</span></td></tr><tr><td><strong>EC2</strong><br><span style="font-size:0.5rem;color:#94a3b8">i-0b2c3d4e5f6789abc</span></td><td>Idle Resource</td><td>t3.large</td><td class="td-blue">terminate</td><td class="td-green">$60.74/mo</td><td><span class="imp-badge imp-high">high impact</span></td><td><span class="stat-badge stat-pending">pending</span></td></tr><tr><td><strong>EC2</strong><br><span style="font-size:0.5rem;color:#94a3b8">i-0c3d4e5f6789abcde</span></td><td>Modernization</td><td>t3.medium</td><td class="td-blue">Lambda</td><td class="td-green">$22/mo</td><td><span class="imp-badge imp-medium">medium impact</span></td><td><span class="stat-badge stat-pending">pending</span></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+                </div><!-- /demo-main -->
+            </div><!-- /demo-body -->
+        </div><!-- /demo-browser -->
+    </div><!-- /hero-container -->
+</section>
+
+<!-- ═══════ PRODUCT SHOWCASE ═══════ -->
+<section class="showcase" id="showcase">
+    <div class="section-container">
+        <div class="section-header">
+            <span class="section-tag">Product Deep Dive</span>
+            <h2 class="section-title">See Every Screen. Understand Every Insight.</h2>
+            <p class="section-subtitle">FinOpsMind isn&rsquo;t a dashboard &mdash; it&rsquo;s an intelligence layer. Explore each capability powered by real ML models and actual cloud cost data.</p>
+        </div>
+        <div class="showcase-tabs">
+            <button class="showcase-tab active" data-showcase="sc-dashboard">Dashboard</button>
+            <button class="showcase-tab" data-showcase="sc-anomalies">Anomaly Detection</button>
+            <button class="showcase-tab" data-showcase="sc-forecasts">ML Forecasting</button>
+            <button class="showcase-tab" data-showcase="sc-recs">Recommendations</button>
+        </div>
+
+        <div class="showcase-panel active" id="sc-dashboard">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <h3>Your Cloud Costs at a <span class="hl">Single Glance</span></h3>
+                    <p>The dashboard delivers an executive summary of your entire cloud estate. Total 30-day spend, active anomalies, budget status, and potential savings &mdash; all surfaced in real-time with zero configuration.</p>
+                    <p>Unlike basic cloud consoles, FinOpsMind correlates data across services to surface patterns that single-service views miss entirely. The cost trend chart reveals whether spend is accelerating, while the donut breakdown exposes exactly which resources are driving growth.</p>
+                    <ul class="showcase-feature-list"><li>Real-time cost aggregation across all AWS services</li><li>Anomaly alerts surfaced directly on the dashboard with severity badges</li><li>Interactive donut chart showing service-level cost distribution</li><li>Top recommendations ranked by monthly savings potential</li></ul>
+                    <div class="showcase-stats"><div><div class="showcase-stat-value">$4,850</div><div class="showcase-stat-label">30-day spend tracked</div></div><div><div class="showcase-stat-value">5</div><div class="showcase-stat-label">Active anomalies</div></div><div><div class="showcase-stat-value">$3,925</div><div class="showcase-stat-label">Savings identified</div></div></div>
+                </div>
+                <div class="showcase-browser">
+                    <div class="demo-titlebar"><div class="demo-dots"><span></span><span></span><span></span></div><div class="demo-url">app.finopsmind.ai/dashboard</div></div>
+                    <div style="background:#f8fafc;overflow:hidden;">
+<div style="display:flex;min-height:440px;">
+    <div style="width:170px;background:#141b2b;padding:1rem 0.6rem;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:0.85rem;color:#00d8a4;padding:0 0.4rem 0.8rem">FinOpsMind<br><span style="font-family:var(--font-body);font-weight:400;font-size:0.58rem;color:#64748b">Cloud Cost Intelligence</span></div>
+        <div style="background:rgba(59,130,246,0.15);color:#60a5fa;padding:0.35rem 0.5rem;border-radius:6px;font-size:0.7rem;margin-bottom:2px;display:flex;align-items:center;gap:0.4rem">&#x25A6; Dashboard</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">$ Costs</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#9650; Anomalies</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2197; Forecasts</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x1F4A1; Recommendations</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2699; Settings</div>
+    </div>
+    <div style="flex:1;padding:1rem 1.25rem;overflow:hidden;background:#f8fafc">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+            <div style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:#0f172a">Dashboard</div>
+            <span style="background:#3b82f6;color:white;padding:2px 10px;border-radius:4px;font-size:0.6rem;font-weight:600">AWS</span>
+        </div>
+        <div class="dp-cards" style="padding:0;margin-bottom:0.6rem">
+            <div class="dp-card"><div class="dp-card-label">Total Costs (30d)</div><div class="dp-card-value">$4,850</div><div class="dp-card-change">&#9650; 15.5%</div></div>
+            <div class="dp-card"><div class="dp-card-label">Active Anomalies</div><div class="dp-card-value">5</div></div>
+            <div class="dp-card"><div class="dp-card-label">Budgets</div><div class="dp-card-value">6 active</div><div style="font-size:0.52rem;color:#ea580c">1 exceeded</div></div>
+            <div class="dp-card"><div class="dp-card-label">Potential Savings</div><div class="dp-card-value" style="color:#16a34a">$3,925.02</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:0.6rem;margin-bottom:0.6rem">
+            <div class="dp-chart-box"><div class="dp-chart-title">Cost Trend</div><svg viewBox="0 0 400 80" width="100%" height="70" preserveAspectRatio="none">
+<path d="M0 45 L30 50 L60 35 L90 40 L120 30 L150 35 L180 25 L210 38 L240 30 L270 35 L300 28 L330 20 L360 22 L400 15" fill="none" stroke="#3b82f6" stroke-width="2"/>
+<path d="M0 45 L30 50 L60 35 L90 40 L120 30 L150 35 L180 25 L210 38 L240 30 L270 35 L300 28 L330 20 L360 22 L400 15 L400 80 L0 80Z" fill="url(#cg1)"/>
+</svg></div>
+            <div class="dp-chart-box"><div class="dp-chart-title">Cost by Service</div><div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.3rem"><svg viewBox="0 0 100 100" width="72" height="72">
+<circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="20" stroke-dasharray="130.9 120" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" stroke-width="20" stroke-dasharray="62.8 188" stroke-dashoffset="-130.9" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" stroke-width="20" stroke-dasharray="20.1 231" stroke-dashoffset="-193.7" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" stroke-width="20" stroke-dasharray="17.6 233" stroke-dashoffset="-213.8" transform="rotate(-90 50 50)"/>
+<circle cx="50" cy="50" r="30" fill="#f8fafc"/>
+</svg><div style="font-size:0.55rem;color:#64748b;line-height:1.8">
+<div><span style="color:#3b82f6">&bull;</span> EC2 52%</div>
+<div><span style="color:#22c55e">&bull;</span> RDS 25%</div>
+<div><span style="color:#f59e0b">&bull;</span> S3 8%</div>
+<div><span style="color:#ef4444">&bull;</span> Lambda 7%</div>
+</div></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+            <div class="dp-bottom-panel"><div class="dp-bottom-title">Recent Anomalies</div>
+                <div class="dp-anomaly-row"><span>EC2 <small style="color:#94a3b8">2/7/2026</small></span><span style="color:#dc2626">+264.3%</span><span class="dp-badge critical">critical</span></div>
+                <div class="dp-anomaly-row"><span>Data Transfer <small style="color:#94a3b8">2/7/2026</small></span><span style="color:#dc2626">+273.3%</span><span class="dp-badge critical">critical</span></div>
+                <div class="dp-anomaly-row"><span>RDS <small style="color:#94a3b8">2/6/2026</small></span><span style="color:#ea580c">+91.7%</span><span class="dp-badge high">high</span></div>
+                <div class="dp-anomaly-row"><span>Lambda <small style="color:#94a3b8">2/6/2026</small></span><span style="color:#ea580c">+145.3%</span><span class="dp-badge high">high</span></div>
+            </div>
+            <div class="dp-bottom-panel"><div class="dp-bottom-title">Top Recommendations</div>
+                <div class="dp-rec-row"><span>EC2 &mdash; Rightsizing</span><span class="dp-rec-savings">$70.08/mo</span></div>
+                <div class="dp-rec-row"><span>EC2 &mdash; Idle Resource</span><span class="dp-rec-savings">$60.74/mo</span></div>
+                <div class="dp-rec-row"><span>EC2 &mdash; Modernization</span><span class="dp-rec-savings">$22/mo</span></div>
+                <div class="dp-rec-row"><span>EC2 &mdash; Spot Instance</span><span class="dp-rec-savings">$85/mo</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="showcase-panel" id="sc-anomalies">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <h3>Catch Cost Spikes <span class="hl">Days Before</span> They Hit Your Bill</h3>
+                    <p>Most teams discover cost anomalies when the invoice arrives. FinOpsMind&rsquo;s ML model analyses spending patterns continuously and flags deviations the moment they occur &mdash; not 30 days later.</p>
+                    <p>Each anomaly shows the expected baseline, actual spend, percentage deviation, severity classification, and investigation status. The data here is real: an EC2 spike of +264.3% above baseline and a Data Transfer surge of +273.3% &mdash; both flagged as critical before they could snowball into a five-figure surprise.</p>
+                    <ul class="showcase-feature-list"><li>13 anomalies detected across 10 AWS services</li><li>Severity classification: critical, high, medium, low</li><li>Status tracking: open, investigating, acknowledged, resolved</li><li>Expected vs actual cost comparison with deviation percentages</li><li>Filterable by status and severity for triage workflows</li></ul>
+                    <div class="showcase-stats"><div><div class="showcase-stat-value">13</div><div class="showcase-stat-label">Anomalies detected</div></div><div><div class="showcase-stat-value">2</div><div class="showcase-stat-label">Critical alerts</div></div><div><div class="showcase-stat-value">+264%</div><div class="showcase-stat-label">Largest deviation caught</div></div></div>
+                </div>
+                <div class="showcase-browser">
+                    <div class="demo-titlebar"><div class="demo-dots"><span></span><span></span><span></span></div><div class="demo-url">app.finopsmind.ai/anomalies</div></div>
+                    <div style="background:#f8fafc;overflow:hidden;">
+<div style="display:flex;min-height:440px;">
+    <div style="width:170px;background:#141b2b;padding:1rem 0.6rem;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:0.85rem;color:#00d8a4;padding:0 0.4rem 0.8rem">FinOpsMind<br><span style="font-family:var(--font-body);font-weight:400;font-size:0.58rem;color:#64748b">Cloud Cost Intelligence</span></div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x25A6; Dashboard</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">$ Costs</div>
+        <div style="background:rgba(59,130,246,0.15);color:#60a5fa;padding:0.35rem 0.5rem;border-radius:6px;font-size:0.7rem;margin-bottom:2px;display:flex;align-items:center;gap:0.4rem">&#9650; Anomalies</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2197; Forecasts</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x1F4A1; Recommendations</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2699; Settings</div>
+    </div>
+    <div style="flex:1;padding:1rem 1.25rem;overflow:hidden;background:#f8fafc">
+        <div style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:0.15rem">Anomaly Detection</div>
+        <div style="font-size:0.65rem;color:#64748b;margin-bottom:0.6rem">AI-detected cost anomalies and unusual spending patterns</div>
+        <div class="dp-cards" style="padding:0;margin-bottom:0.6rem">
+            <div class="dp-card"><div class="dp-card-label">Total Anomalies</div><div class="dp-card-value">13</div></div>
+            <div class="dp-card"><div class="dp-card-label">Critical</div><div class="dp-card-value" style="color:#dc2626">2</div></div>
+            <div class="dp-card"><div class="dp-card-label">Open</div><div class="dp-card-value" style="color:#2563eb">5</div></div>
+            <div class="dp-card"><div class="dp-card-label">Resolved</div><div class="dp-card-value" style="color:#16a34a">6</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem">
+            <span class="dp-filter-select">All Statuses &#9660;</span>
+            <span class="dp-filter-select">All Severities &#9660;</span>
+            <span style="margin-left:auto;font-size:0.6rem;color:#94a3b8">13 anomalies</span>
+        </div>
+        <table class="dp-table">
+            <thead><tr><th>Date</th><th>Service</th><th>Expected</th><th>Actual</th><th>Deviation</th><th>Severity</th><th>Status</th></tr></thead>
+            <tbody><tr><td>2/7/2026</td><td><strong>EC2</strong></td><td>$245</td><td class="td-red">$892.5</td><td class="td-red">+264.3%</td><td><span class="sev-badge sev-critical">critical</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/7/2026</td><td><strong>Data Transfer</strong></td><td>$42</td><td class="td-red">$156.8</td><td class="td-red">+273.3%</td><td><span class="sev-badge sev-critical">critical</span></td><td><span class="stat-badge stat-investigating">investigating</span></td></tr><tr><td>2/6/2026</td><td><strong>RDS</strong></td><td>$180</td><td class="td-red">$345</td><td class="td-red">+91.7%</td><td><span class="sev-badge sev-high">high</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/6/2026</td><td><strong>Lambda</strong></td><td>$32</td><td class="td-red">$78.5</td><td class="td-red">+145.3%</td><td><span class="sev-badge sev-high">high</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/5/2026</td><td><strong>EBS</strong></td><td>$120</td><td class="td-red">$234</td><td class="td-red">+95.0%</td><td><span class="sev-badge sev-high">high</span></td><td><span class="stat-badge stat-acknowledged">acknowledged</span></td></tr><tr><td>2/4/2026</td><td><strong>CloudWatch</strong></td><td>$22</td><td class="td-red">$45.6</td><td class="td-red">+107.3%</td><td><span class="sev-badge sev-medium">medium</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/4/2026</td><td><strong>S3</strong></td><td>$55</td><td class="td-red">$89</td><td class="td-red">+61.8%</td><td><span class="sev-badge sev-medium">medium</span></td><td><span class="stat-badge stat-open">open</span></td></tr><tr><td>2/3/2026</td><td><strong>ElastiCache</strong></td><td>$38</td><td class="td-red">$67.8</td><td class="td-red">+78.4%</td><td><span class="sev-badge sev-medium">medium</span></td><td><span class="stat-badge stat-resolved">resolved</span></td></tr><tr><td>2/2/2026</td><td><strong>SNS</strong></td><td>$12</td><td class="td-red">$23.4</td><td class="td-red">+95.0%</td><td><span class="sev-badge sev-low">low</span></td><td><span class="stat-badge stat-resolved">resolved</span></td></tr><tr><td>2/1/2026</td><td><strong>SQS</strong></td><td>$20</td><td class="td-red">$34.2</td><td class="td-red">+71.0%</td><td><span class="sev-badge sev-low">low</span></td><td><span class="stat-badge stat-resolved">resolved</span></td></tr></tbody>
+        </table>
+    </div>
+</div>
+</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="showcase-panel" id="sc-forecasts">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <h3>Know Tomorrow's Cloud Bill <span class="hl">Today</span></h3>
+                    <p>FinOpsMind uses Facebook&rsquo;s Prophet time series model to forecast your cloud spend with 92% confidence. The forecast chart shows predicted costs alongside confidence intervals, so you know not just what&rsquo;s likely but how uncertain the estimate is.</p>
+                    <p>Daily predictions include lower and upper bounds with precise range calculations. The 7-day forecast of $5,322 with $177.40 daily average lets finance teams plan budgets with data, not guesswork. Budget breach alerts fire before you exceed thresholds.</p>
+                    <ul class="showcase-feature-list"><li>Prophet-1.2 ML model for time series forecasting</li><li>92% confidence level with upper/lower bounds</li><li>7-day and 30-day forecast horizons</li><li>Daily prediction table with range calculations</li><li>Budget vs forecast variance tracking</li></ul>
+                    <div class="showcase-stats"><div><div class="showcase-stat-value">92%</div><div class="showcase-stat-label">Confidence level</div></div><div><div class="showcase-stat-value">$177</div><div class="showcase-stat-label">Avg daily predicted</div></div><div><div class="showcase-stat-value">prophet-1.2</div><div class="showcase-stat-label">ML model</div></div></div>
+                </div>
+                <div class="showcase-browser">
+                    <div class="demo-titlebar"><div class="demo-dots"><span></span><span></span><span></span></div><div class="demo-url">app.finopsmind.ai/forecasts</div></div>
+                    <div style="background:#f8fafc;overflow:hidden;">
+<div style="display:flex;min-height:440px;">
+    <div style="width:170px;background:#141b2b;padding:1rem 0.6rem;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:0.85rem;color:#00d8a4;padding:0 0.4rem 0.8rem">FinOpsMind<br><span style="font-family:var(--font-body);font-weight:400;font-size:0.58rem;color:#64748b">Cloud Cost Intelligence</span></div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x25A6; Dashboard</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">$ Costs</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#9650; Anomalies</div>
+        <div style="background:rgba(59,130,246,0.15);color:#60a5fa;padding:0.35rem 0.5rem;border-radius:6px;font-size:0.7rem;margin-bottom:2px;display:flex;align-items:center;gap:0.4rem">&#x2197; Forecasts</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x1F4A1; Recommendations</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2699; Settings</div>
+    </div>
+    <div style="flex:1;padding:1rem 1.25rem;overflow:hidden;background:#f8fafc">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+            <div><div style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:#0f172a">Cost Forecasting</div><div style="font-size:0.65rem;color:#64748b">ML-powered predictions for future cloud spending</div></div>
+            <span style="color:#16a34a;font-size:0.6rem;display:flex;align-items:center;gap:3px">&#x1F4C8; Model: prophet-1.2</span>
+        </div>
+        <div class="dp-cards" style="padding:0;margin-bottom:0.6rem">
+            <div class="dp-card"><div class="dp-card-label">7-Day Forecast</div><div class="dp-card-value">$5,322</div></div>
+            <div class="dp-card"><div class="dp-card-label">Avg Daily Predicted</div><div class="dp-card-value">$177.40</div></div>
+            <div class="dp-card"><div class="dp-card-label">Confidence Level</div><div class="dp-card-value" style="color:#16a34a">92%</div></div>
+            <div class="dp-card"><div class="dp-card-label">Last Updated</div><div class="dp-card-value">N/A</div></div>
+        </div>
+        <div class="dp-chart-box" style="margin-bottom:0.6rem;min-height:110px;position:relative">
+            <div class="dp-chart-title">Cost Forecast with Confidence Interval</div>
+            <svg viewBox="0 0 500 80" width="100%" height="75" preserveAspectRatio="none">
+                <path d="M250 42 Q300 38 350 33 Q400 28 450 22 Q475 18 500 12 L500 62 Q475 56 450 52 Q400 48 350 45 Q300 43 250 42 Z" fill="url(#confBand)"/>
+                <path d="M0 55 L50 50 L100 58 L150 45 L200 47 L250 42" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+                <path d="M250 42 Q300 38 350 33 Q400 28 450 22 Q475 18 500 12" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="6,3"/>
+                <line x1="250" y1="5" x2="250" y2="75" stroke="#94a3b8" stroke-width="0.5" stroke-dasharray="3,3"/>
+                <circle cx="250" cy="42" r="3" fill="#3b82f6" stroke="white" stroke-width="1.5"/>
+            </svg>
+        </div>
+        <div style="font-size:0.72rem;font-weight:600;color:#334155;margin-bottom:0.4rem">Daily Predictions</div>
+        <table class="dp-table">
+            <thead><tr><th>Date</th><th>Predicted Cost</th><th>Lower Bound</th><th>Upper Bound</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td>2/9/2026</td><td class="td-green">$165.8</td><td>$140.93</td><td>$190.67</td><td>&plusmn;$24.87</td></tr>
+                <tr><td>2/10/2026</td><td class="td-green">$166.6</td><td>$141.61</td><td>$191.59</td><td>&plusmn;$24.99</td></tr>
+                <tr><td>2/11/2026</td><td class="td-green">$167.4</td><td>$142.29</td><td>$192.51</td><td>&plusmn;$25.11</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="showcase-panel" id="sc-recs">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <h3>From Insight to Action: <span class="hl">$3,925/mo</span> in Savings</h3>
+                    <p>Recommendations aren&rsquo;t vague suggestions &mdash; they&rsquo;re specific, resource-level actions. Each recommendation tells you exactly which instance to resize, which idle resource to terminate, and which workload to modernize to Lambda.</p>
+                    <p>The savings bar chart breaks down potential by type: commitment discounts dominate at $1,400+, followed by rightsizing at $800+ and spot instances at $650+. Every recommendation includes current configuration, recommended target, monthly savings, impact classification, and implementation status.</p>
+                    <ul class="showcase-feature-list"><li>19 actionable recommendations with specific resource IDs</li><li>7 recommendation types: rightsizing, idle, modernization, spot, commitment, storage, networking</li><li>Impact classification: high, medium, low for prioritisation</li><li>Savings bar chart visualising potential by category</li><li>Status tracking from pending through implemented</li></ul>
+                    <div class="showcase-stats"><div><div class="showcase-stat-value">$3,925</div><div class="showcase-stat-label">Monthly savings</div></div><div><div class="showcase-stat-value">19</div><div class="showcase-stat-label">Recommendations</div></div><div><div class="showcase-stat-value">12</div><div class="showcase-stat-label">High impact</div></div></div>
+                </div>
+                <div class="showcase-browser">
+                    <div class="demo-titlebar"><div class="demo-dots"><span></span><span></span><span></span></div><div class="demo-url">app.finopsmind.ai/recs</div></div>
+                    <div style="background:#f8fafc;overflow:hidden;">
+<div style="display:flex;min-height:440px;">
+    <div style="width:170px;background:#141b2b;padding:1rem 0.6rem;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:0.85rem;color:#00d8a4;padding:0 0.4rem 0.8rem">FinOpsMind<br><span style="font-family:var(--font-body);font-weight:400;font-size:0.58rem;color:#64748b">Cloud Cost Intelligence</span></div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x25A6; Dashboard</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">$ Costs</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#9650; Anomalies</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2197; Forecasts</div>
+        <div style="background:rgba(59,130,246,0.15);color:#60a5fa;padding:0.35rem 0.5rem;border-radius:6px;font-size:0.7rem;margin-bottom:2px;display:flex;align-items:center;gap:0.4rem">&#x1F4A1; Recommendations</div>
+        <div style="color:#94a3b8;padding:0.35rem 0.5rem;font-size:0.7rem">&#x2699; Settings</div>
+    </div>
+    <div style="flex:1;padding:1rem 1.25rem;overflow:hidden;background:#f8fafc">
+        <div style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:0.15rem">Cost Optimization</div>
+        <div style="font-size:0.65rem;color:#64748b;margin-bottom:0.6rem">AI-powered recommendations to reduce cloud spending</div>
+        <div class="dp-cards" style="padding:0;margin-bottom:0.6rem">
+            <div class="dp-card"><div class="dp-card-label">Total Recommendations</div><div class="dp-card-value">19</div></div>
+            <div class="dp-card"><div class="dp-card-label">Potential Savings</div><div class="dp-card-value" style="color:#16a34a;font-size:0.9rem">$3,925.02/mo</div></div>
+            <div class="dp-card"><div class="dp-card-label">High Impact</div><div class="dp-card-value">12</div></div>
+            <div class="dp-card"><div class="dp-card-label">Implemented</div><div class="dp-card-value">1</div></div>
+        </div>
+        <div style="font-size:0.72rem;font-weight:600;color:#334155;margin-bottom:0.3rem">Savings by Recommendation Type</div>
+        <div class="dp-bar-chart" style="padding:0;margin-bottom:0.5rem">
+            <div class="dp-bar-group"><div class="dp-bar" style="height:48px"></div><div class="dp-bar-label">rightsizing</div></div>
+            <div class="dp-bar-group"><div class="dp-bar" style="height:15px"></div><div class="dp-bar-label">idle</div></div>
+            <div class="dp-bar-group"><div class="dp-bar" style="height:25px"></div><div class="dp-bar-label">modernize</div></div>
+            <div class="dp-bar-group"><div class="dp-bar" style="height:38px"></div><div class="dp-bar-label">spot</div></div>
+            <div class="dp-bar-group"><div class="dp-bar" style="height:72px"></div><div class="dp-bar-label">commit</div></div>
+            <div class="dp-bar-group"><div class="dp-bar" style="height:18px"></div><div class="dp-bar-label">storage</div></div>
+            <div class="dp-bar-group"><div class="dp-bar" style="height:6px"></div><div class="dp-bar-label">network</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem">
+            <span style="color:#94a3b8;font-size:0.65rem">&#9660;</span>
+            <span class="dp-filter-select">All Types &#9660;</span>
+            <span class="dp-filter-select">All Impact Levels &#9660;</span>
+            <span style="margin-left:auto;font-size:0.6rem;color:#94a3b8">19 recommendations</span>
+        </div>
+        <table class="dp-table">
+            <thead><tr><th>Resource</th><th>Type</th><th>Current</th><th>Recommended</th><th>Savings</th><th>Impact</th><th>Status</th></tr></thead>
+            <tbody><tr><td><strong>EC2</strong><br><span style="font-size:0.5rem;color:#94a3b8">i-0a1b2c3d4e5f6789a</span></td><td>Rightsizing</td><td>m5.xlarge</td><td class="td-blue">m5.large</td><td class="td-green">$70.08/mo</td><td><span class="imp-badge imp-high">high impact</span></td><td><span class="stat-badge stat-pending">pending</span></td></tr><tr><td><strong>EC2</strong><br><span style="font-size:0.5rem;color:#94a3b8">i-0b2c3d4e5f6789abc</span></td><td>Idle Resource</td><td>t3.large</td><td class="td-blue">terminate</td><td class="td-green">$60.74/mo</td><td><span class="imp-badge imp-high">high impact</span></td><td><span class="stat-badge stat-pending">pending</span></td></tr><tr><td><strong>EC2</strong><br><span style="font-size:0.5rem;color:#94a3b8">i-0c3d4e5f6789abcde</span></td><td>Modernization</td><td>t3.medium</td><td class="td-blue">Lambda</td><td class="td-green">$22/mo</td><td><span class="imp-badge imp-medium">medium impact</span></td><td><span class="stat-badge stat-pending">pending</span></td></tr></tbody>
+        </table>
+    </div>
+</div>
+</div>
+                </div>
+            </div>
+        </div>
+    
+    </div>
+</section>
+
+<section class="features" id="features">
+    <div class="section-container" style="padding:0 2rem">
+        <div class="section-header">
+            <span class="section-tag">Capabilities</span>
+            <h2 class="section-title">Beyond Basic Cost Dashboards</h2>
+            <p class="section-subtitle">FinOpsMind goes beyond traditional FinOps tools with ML-powered intelligence, automated remediation, and true multi-cloud support.</p>
+        </div>
+        <div class="features-grid"><div class="feature-card reveal"><div class="feature-icon">🔮</div><h3 class="feature-title">Predictive Anomaly Detection</h3><p class="feature-desc">Isolation Forest and Random Cut Forest algorithms detect spending deviations before they become problems. Know about cost spikes 3 days early, not 30 days late.</p></div><div class="feature-card reveal"><div class="feature-icon">📈</div><h3 class="feature-title">Intelligent Forecasting</h3><p class="feature-desc">Prophet-based time series forecasting projects costs with 92% confidence intervals. Budget vs. forecast tracking catches overruns before they happen.</p></div><div class="feature-card reveal"><div class="feature-icon">☁️</div><h3 class="feature-title">True Multi-Cloud</h3><p class="feature-desc">Native integrations with AWS Cost Explorer, Azure Cost Management, and GCP Cloud Billing. One unified view across all providers.</p></div><div class="feature-card reveal"><div class="feature-icon">🔧</div><h3 class="feature-title">Terraform Generation</h3><p class="feature-desc">Don&rsquo;t just see recommendations &mdash; get executable Terraform and CloudFormation code. One-click implementation via your CI/CD pipeline.</p></div><div class="feature-card reveal"><div class="feature-icon">🏗️</div><h3 class="feature-title">Re-Architecture Recommendations</h3><p class="feature-desc">Go beyond rightsizing. Intelligent suggestions for EC2 to Fargate, Lambda modernisation, spot instance adoption, and commitment optimisation.</p></div><div class="feature-card reveal"><div class="feature-icon">📊</div><h3 class="feature-title">TBM Integration</h3><p class="feature-desc">Full Technology Business Management with ATUM taxonomy mapping. Chargeback/showback for cost allocation to business units and cost centres.</p></div></div>
+    </div>
+</section>
+
+<section class="comparison" id="comparison">
+    <div class="section-container" style="padding:0 2rem">
+        <div class="section-header">
+            <span class="section-tag">Why FinOpsMind</span>
+            <h2 class="section-title">The Only Platform That Does It All</h2>
+            <p class="section-subtitle">See how FinOpsMind compares to the enterprise giants and native cloud tools.</p>
+        </div>
+        <div class="comp-table">
+            <table>
+                <thead><tr><th style="text-align:left">Capability</th><th>Apptio</th><th>Flexera</th><th>Native Tools</th><th class="hl">FinOpsMind</th></tr></thead>
+                <tbody><tr><td style="text-align:left;font-weight:500">Cost Dashboards</td><td><span class="c-yes">✓</span></td><td><span class="c-yes">✓</span></td><td><span class="c-yes">✓</span></td><td class="hl"><span class="c-yes">✓</span></td></tr><tr><td style="text-align:left;font-weight:500">Multi-Cloud Support</td><td><span class="c-part">⚠</span></td><td><span class="c-yes">✓</span></td><td><span class="c-no">✗</span></td><td class="hl"><span class="c-yes">✓</span></td></tr><tr><td style="text-align:left;font-weight:500">ML Anomaly Detection</td><td><span class="c-part">⚠</span></td><td><span class="c-part">⚠</span></td><td><span class="c-no">✗</span></td><td class="hl"><span class="c-yes">✓</span></td></tr><tr><td style="text-align:left;font-weight:500">Proactive Cost Predictions</td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td class="hl"><span class="c-excl">✓ Exclusive</span></td></tr><tr><td style="text-align:left;font-weight:500">Re-Architecture Recommendations</td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td class="hl"><span class="c-excl">✓ Exclusive</span></td></tr><tr><td style="text-align:left;font-weight:500">Generate Terraform/IaC</td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td class="hl"><span class="c-excl">✓ Exclusive</span></td></tr><tr><td style="text-align:left;font-weight:500">CI/CD Pipeline Integration</td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td><span class="c-no">✗</span></td><td class="hl"><span class="c-excl">✓ Exclusive</span></td></tr><tr><td style="text-align:left;font-weight:500">TBM/Chargeback</td><td><span class="c-yes">✓</span></td><td><span class="c-yes">✓</span></td><td><span class="c-part">⚠</span></td><td class="hl"><span class="c-yes">✓</span></td></tr><tr><td style="text-align:left;font-weight:500">SMB-Friendly Pricing</td><td><span class="c-no">✗ £50k+</span></td><td><span class="c-no">✗ £50k+</span></td><td><span class="c-yes">Free</span></td><td class="hl" style="color:var(--accent-primary)">£2-18k</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="pricing" id="pricing">
+    <div class="section-container" style="padding:0 2rem">
+        <div class="section-header">
+            <span class="section-tag">Pricing</span>
+            <h2 class="section-title">Enterprise Power, SMB Pricing</h2>
+            <p class="section-subtitle">Get capabilities that cost £50k+ elsewhere for a fraction of the price. No hidden fees. Cancel anytime.</p>
+        </div>
+        <div class="pricing-grid"><div class="pricing-card reveal">
+        <div class="pricing-tier">Starter</div>
+        <div class="pricing-price"><span class="price-value">£199</span><span class="price-period">/month</span></div>
+        <p class="pricing-desc">Perfect for small teams with a single cloud provider and basic cost visibility needs.</p>
+        <ul class="pricing-features"><li>Single cloud provider</li><li>Up to £100k monthly cloud spend</li><li>Cost dashboards & analytics</li><li>Basic anomaly detection</li><li>Email notifications</li><li>30-day data retention</li></ul>
+        <a href="#" class="btn btn-secondary">Start Free Trial</a>
+    </div><div class="pricing-card featured reveal">
+        <div class="pricing-tier">Growth</div>
+        <div class="pricing-price"><span class="price-value">£599</span><span class="price-period">/month</span></div>
+        <p class="pricing-desc">For growing companies with multi-cloud environments and advanced optimisation needs.</p>
+        <ul class="pricing-features"><li>Multi-cloud (AWS, Azure, GCP)</li><li>Up to £500k monthly spend</li><li>ML-powered anomaly detection</li><li>Predictive cost forecasting</li><li>Terraform/IaC generation</li><li>Slack + Teams integration</li><li>90-day data retention</li><li>API access</li></ul>
+        <a href="#" class="btn btn-primary">Start Free Trial</a>
+    </div><div class="pricing-card reveal">
+        <div class="pricing-tier">Enterprise</div>
+        <div class="pricing-price"><span class="price-value">£1,499</span><span class="price-period">/month</span></div>
+        <p class="pricing-desc">Full platform access with TBM integration, SSO, and dedicated support.</p>
+        <ul class="pricing-features"><li>Everything in Growth, plus:</li><li>Unlimited cloud spend</li><li>TBM taxonomy (ATUM)</li><li>Chargeback/showback</li><li>CI/CD pipeline integration</li><li>SSO/SAML authentication</li><li>Unlimited data retention</li><li>Dedicated success manager</li></ul>
+        <a href="#" class="btn btn-secondary">Contact Sales</a>
+    </div></div>
+    </div>
+</section>
+
+<section class="cta">
+    <div class="cta-content">
+        <h2>Ready to Stop Overpaying for Cloud?</h2>
+        <p>Join cloud-native companies using FinOpsMind to predict, prevent, and remediate cloud cost issues before they impact your bill.</p>
+        <div class="cta-buttons">
+            <a href="#" class="btn btn-primary btn-large">Start 14-Day Free Trial</a>
+            <a href="#" class="btn btn-secondary btn-large">Book a Demo</a>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <a href="#" class="logo"><div class="logo-icon">📊</div><div class="logo-text">FinOps<span>Mind</span></div></a>
+            <p>The AI-powered FinOps platform that predicts cloud cost issues before they hit your bill. Built by cloud architects, for cloud architects.</p>
+        </div>
+        <div class="footer-col"><h4>Product</h4><ul><li><a href="#">Features</a></li><li><a href="#">Pricing</a></li><li><a href="#">Integrations</a></li><li><a href="#">Changelog</a></li></ul></div>
+        <div class="footer-col"><h4>Resources</h4><ul><li><a href="#">Documentation</a></li><li><a href="#">API Reference</a></li><li><a href="#">Blog</a></li><li><a href="#">Case Studies</a></li></ul></div>
+        <div class="footer-col"><h4>Company</h4><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li><li><a href="#">Contact</a></li><li><a href="#">Partners</a></li></ul></div>
+        <div class="footer-col"><h4>Legal</h4><ul><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li><li><a href="#">Security</a></li><li><a href="#">GDPR</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+        <div>&copy; 2026 FinOpsMind. All rights reserved.</div>
+        <div style="display:flex;gap:1rem"><a href="#" style="color:var(--text-muted);text-decoration:none">𝕏</a><a href="#" style="color:var(--text-muted);text-decoration:none">in</a><a href="#" style="color:var(--text-muted);text-decoration:none">🐙</a></div>
+    </div>
+</footer>
+
+<script>
+// Hero demo nav
+document.querySelectorAll('#heroDemoBrowser .demo-nav-item[data-panel]').forEach(item => {
+    item.addEventListener('click', () => {
+        document.querySelectorAll('#heroDemoBrowser .demo-nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        document.querySelectorAll('#heroDemoBrowser .demo-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(item.dataset.panel);
+        if (panel) panel.classList.add('active');
+        document.getElementById('heroUrl').textContent = item.dataset.url || '';
+    });
+});
+
+// Showcase tabs
+document.querySelectorAll('.showcase-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.showcase-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(tab.dataset.showcase);
+        if (panel) panel.classList.add('active');
+    });
+});
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', function(e) {
+        e.preventDefault();
+        const t = document.querySelector(this.getAttribute('href'));
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+// Nav scroll effect
+window.addEventListener('scroll', () => {
+    document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Reveal on scroll
+const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+</script>
+</body>
+</html>

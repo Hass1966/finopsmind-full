@@ -1,0 +1,16 @@
+# ============================================================================
+# EC2 Instance Stop (Idle Resource)
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Resource: {{.ResourceID}} ({{.ResourceName}})
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# Note: Stopped instances still incur EBS and EIP charges.
+# ============================================================================
+
+resource "null_resource" "stop_{{.ResourceName}}" {
+  provisioner "local-exec" {
+    command = "aws ec2 stop-instances --instance-ids {{.ResourceID}} --region {{.Region}}"
+  }
+  triggers = { instance_id = "{{.ResourceID}}" }
+}

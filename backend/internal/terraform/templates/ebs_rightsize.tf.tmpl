@@ -1,0 +1,23 @@
+# ============================================================================
+# EBS Volume Rightsizing
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Current: {{.VolumeSize}} GB -> Recommended: {{.NewVolumeSize}} GB
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# Note: EBS can only increase, not decrease. Downsizing requires migration.
+# terraform import aws_ebs_volume.{{.ResourceName}} {{.ResourceID}}
+# ============================================================================
+
+resource "aws_ebs_volume" "{{.ResourceName}}" {
+  availability_zone = "{{.Region}}a"
+  size              = {{.NewVolumeSize}}
+  type              = "{{.VolumeType}}"
+
+  tags = {
+    Name         = "{{.ResourceName}}"
+    ManagedBy    = "terraform"
+    FinOpsMind   = "rightsized"
+    PreviousSize = "{{.VolumeSize}}"
+  }
+}

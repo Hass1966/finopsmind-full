@@ -1,0 +1,23 @@
+package recommendations
+import ("encoding/json";"time")
+type RecommendationType string
+const (TypeIdleResource RecommendationType="idle_resource";TypeUnattachedResource RecommendationType="unattached_resource";TypeOversized RecommendationType="oversized";TypeMissingOptimization RecommendationType="missing_optimization";TypeNetworkingWaste RecommendationType="networking_waste";TypeRetentionCleanup RecommendationType="retention_cleanup")
+type Severity string
+const (SeverityLow Severity="low";SeverityMedium Severity="medium";SeverityHigh Severity="high";SeverityCritical Severity="critical")
+type Confidence string
+const (ConfidenceLow Confidence="low";ConfidenceMedium Confidence="medium";ConfidenceHigh Confidence="high")
+type ResourceMetadata struct{AccountID string`json:"account_id,omitempty"`;Region string`json:"region,omitempty"`;Tags map[string]string`json:"tags,omitempty"`;CurrentConfig map[string]interface{}`json:"current_config,omitempty"`;RecommendedConfig map[string]interface{}`json:"recommended_config,omitempty"`;Metrics map[string]float64`json:"metrics,omitempty"`;AnalysisPeriod string`json:"analysis_period,omitempty"`}
+type Recommendation struct{ID string`json:"id"db:"id"`;Type RecommendationType`json:"type"db:"type"`;RuleID string`json:"rule_id"db:"rule_id"`;ResourceID string`json:"resource_id"db:"resource_id"`;ResourceType string`json:"resource_type"db:"resource_type"`;ResourceARN string`json:"resource_arn,omitempty"db:"resource_arn"`;AccountID string`json:"account_id"db:"account_id"`;Region string`json:"region"db:"region"`;CurrentState string`json:"current_state"db:"current_state"`;RecommendedAction string`json:"recommended_action"db:"recommended_action"`;EstimatedSavings float64`json:"estimated_savings"db:"estimated_savings"`;Confidence Confidence`json:"confidence"db:"confidence"`;Severity Severity`json:"severity"db:"severity"`;TerraformCode string`json:"terraform_code,omitempty"db:"terraform_code"`;ResourceMetadata json.RawMessage`json:"resource_metadata,omitempty"db:"resource_metadata"`;Status string`json:"status"db:"status"`;CreatedAt time.Time`json:"created_at"db:"created_at"`;UpdatedAt time.Time`json:"updated_at"db:"updated_at"`;ExpiresAt*time.Time`json:"expires_at,omitempty"db:"expires_at"`}
+type Rule interface{ID()string;Name()string;Description()string;ResourceTypes()[]string;Evaluate(ctx*RuleContext)([]Recommendation,error)}
+type RuleContext struct{DB DBQuerier;MetricsStore MetricsQuerier;PricingData PricingQuerier;Now time.Time;AccountIDs[]string;Regions[]string}
+type DBQuerier interface{Query(query string,args...interface{})(Rows,error);QueryRow(query string,args...interface{})Row}
+type Rows interface{Next()bool;Scan(dest...interface{})error;Close()error;Err()error}
+type Row interface{Scan(dest...interface{})error}
+type MetricsQuerier interface{GetAverageMetric(resourceID,metricName string,days int)(float64,error);GetMaxMetric(resourceID,metricName string,days int)(float64,error);GetSumMetric(resourceID,metricName string,days int)(float64,error)}
+type PricingQuerier interface{GetEC2HourlyPrice(instanceType,region string)(float64,error);GetRDSHourlyPrice(instanceClass,engine,region string,multiAZ bool)(float64,error);GetEBSMonthlyPrice(volumeType,region string,sizeGB int)(float64,error);GetNATGatewayHourlyPrice(region string)(float64,error);GetDataTransferPrice(region string)(float64,error)}
+type RuleResult struct{RuleID string`json:"rule_id"`;RuleName string`json:"rule_name"`;Recommendations[]Recommendation`json:"recommendations"`;Error error`json:"error,omitempty"`;Duration time.Duration`json:"duration"`}
+type EngineResult struct{RunID string`json:"run_id"`;StartTime time.Time`json:"start_time"`;EndTime time.Time`json:"end_time"`;TotalDuration time.Duration`json:"total_duration"`;RulesExecuted int`json:"rules_executed"`;RulesFailed int`json:"rules_failed"`;TotalRecommendations int`json:"total_recommendations"`;TotalEstimatedSavings float64`json:"total_estimated_savings"`;Results[]RuleResult`json:"results"`}
+func NewResourceMetadata(accountID,region string,tags map[string]string)ResourceMetadata{return ResourceMetadata{AccountID:accountID,Region:region,Tags:tags}}
+func(m ResourceMetadata)ToJSON()json.RawMessage{data,_:=json.Marshal(m);return data}
+func CalculateSeverity(monthlySavings float64)Severity{switch{case monthlySavings>=1000:return SeverityCritical;case monthlySavings>=500:return SeverityHigh;case monthlySavings>=100:return SeverityMedium;default:return SeverityLow}}
+func GenerateRecommendationID(ruleID,resourceID string)string{return ruleID+"-"+resourceID+"-"+time.Now().Format("20060102")}

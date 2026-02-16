@@ -1,0 +1,13 @@
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS rule_id VARCHAR(100);
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS confidence VARCHAR(20) DEFAULT 'medium';
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS terraform_code TEXT;
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS resource_metadata JSONB DEFAULT '{}';
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS resource_arn VARCHAR(500);
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
+CREATE INDEX IF NOT EXISTS idx_recommendations_rule_id ON recommendations(rule_id);
+CREATE INDEX IF NOT EXISTS idx_recommendations_type_severity ON recommendations(type, severity);
+CREATE INDEX IF NOT EXISTS idx_recommendations_status_savings ON recommendations(status, estimated_savings DESC);
+CREATE TABLE IF NOT EXISTS recommendation_history (id SERIAL PRIMARY KEY, recommendation_id VARCHAR(200) NOT NULL, action VARCHAR(50) NOT NULL, old_status VARCHAR(50), new_status VARCHAR(50), user_id VARCHAR(100), notes TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS rule_execution_logs (id SERIAL PRIMARY KEY, run_id VARCHAR(100) NOT NULL, rule_id VARCHAR(100) NOT NULL, rule_name VARCHAR(200), started_at TIMESTAMP WITH TIME ZONE NOT NULL, completed_at TIMESTAMP WITH TIME ZONE, duration_ms INTEGER, recommendations_count INTEGER DEFAULT 0, error_message TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW());
+CREATE OR REPLACE VIEW recommendation_summary_by_account AS SELECT account_id, region, type, severity, status, COUNT(*) as count, SUM(estimated_savings) as total_savings FROM recommendations WHERE status != 'dismissed' GROUP BY account_id, region, type, severity, status;
+CREATE OR REPLACE VIEW top_savings_opportunities AS SELECT id, type, rule_id, resource_id, resource_type, account_id, region, current_state, recommended_action, estimated_savings, confidence, severity, status, created_at FROM recommendations WHERE status = 'pending' ORDER BY estimated_savings DESC LIMIT 100;

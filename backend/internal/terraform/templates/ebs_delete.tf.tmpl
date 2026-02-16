@@ -1,0 +1,22 @@
+# ============================================================================
+# EBS Volume Deletion (Unattached)
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Resource: {{.ResourceID}} ({{.VolumeSize}} GB {{.VolumeType}})
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# WARNING: IRREVERSIBLE! Create snapshot first if needed.
+# ============================================================================
+
+resource "aws_ebs_snapshot" "{{.ResourceName}}_final" {
+  volume_id   = "{{.ResourceID}}"
+  description = "Final snapshot before deletion - FinOpsMind"
+  tags = { Name = "{{.ResourceName}}-final-snapshot", SourceVolume = "{{.ResourceID}}" }
+}
+
+resource "aws_ebs_volume" "{{.ResourceName}}_to_delete" {
+  availability_zone = "{{.Region}}a"
+  size              = {{.VolumeSize}}
+  type              = "{{.VolumeType}}"
+  lifecycle { prevent_destroy = false }
+}

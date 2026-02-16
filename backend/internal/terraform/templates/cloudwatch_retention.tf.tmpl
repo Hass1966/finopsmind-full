@@ -1,0 +1,21 @@
+# ============================================================================
+# CloudWatch Logs Retention Policy
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Log Group: {{.LogGroupName}}
+# Retention: {{.RetentionDays}} days
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# Note: Logs older than retention period are permanently deleted.
+# Export to S3 first if archival is needed.
+# ============================================================================
+
+resource "aws_cloudwatch_log_group" "{{.ResourceName}}" {
+  name              = "{{.LogGroupName}}"
+  retention_in_days = {{.RetentionDays}}
+
+  tags = {
+    ManagedBy     = "terraform"
+    FinOpsMind    = "retention-optimized"
+  }
+}

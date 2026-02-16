@@ -1,0 +1,19 @@
+# ============================================================================
+# Elastic IP Release (Unused)
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Resource: {{.ResourceID}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# WARNING: Cannot reclaim specific IP after release. Check DNS dependencies.
+# terraform import aws_eip.{{.ResourceName}}_to_release {{.ResourceID}}
+# terraform destroy -target=aws_eip.{{.ResourceName}}_to_release
+# ============================================================================
+
+resource "aws_eip" "{{.ResourceName}}_to_release" {
+  tags = {
+    Name       = "{{.ResourceName}}-to-release"
+    FinOpsMind = "scheduled-for-release"
+  }
+  lifecycle { prevent_destroy = false }
+}

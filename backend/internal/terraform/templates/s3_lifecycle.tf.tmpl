@@ -1,0 +1,43 @@
+# ============================================================================
+# S3 Bucket Lifecycle Policy
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Bucket: {{.BucketName}}
+# Transitions: Standard-IA ({{.TransitionDays}}d), Glacier (90d)
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+# ============================================================================
+
+resource "aws_s3_bucket_lifecycle_configuration" "{{.ResourceName}}_lifecycle" {
+  bucket = "{{.BucketName}}"
+
+  rule {
+    id     = "finopsmind-optimization"
+    status = "Enabled"
+    filter { prefix = "" }
+
+    transition {
+      days          = {{.TransitionDays}}
+      storage_class = "STANDARD_IA"
+    }
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+
+    abort_incomplete_multipart_upload { days_after_initiation = 7 }
+  }
+
+  rule {
+    id     = "cleanup-old-versions"
+    status = "Enabled"
+    filter { prefix = "" }
+
+    noncurrent_version_transition {
+      noncurrent_days = 30
+      storage_class   = "GLACIER"
+    }
+
+    noncurrent_version_expiration { noncurrent_days = 90 }
+  }
+}

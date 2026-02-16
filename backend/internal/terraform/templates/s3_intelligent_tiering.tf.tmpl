@@ -1,0 +1,38 @@
+# ============================================================================
+# S3 Intelligent Tiering Configuration
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Bucket: {{.BucketName}}
+# Auto-tiers based on access patterns. No retrieval fees.
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+# ============================================================================
+
+resource "aws_s3_bucket_intelligent_tiering_configuration" "{{.ResourceName}}_tiering" {
+  bucket = "{{.BucketName}}"
+  name   = "finopsmind-intelligent-tiering"
+
+  tiering {
+    access_tier = "ARCHIVE_ACCESS"
+    days        = 90
+  }
+
+  tiering {
+    access_tier = "DEEP_ARCHIVE_ACCESS"
+    days        = 180
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "{{.ResourceName}}_to_intelligent_tiering" {
+  bucket = "{{.BucketName}}"
+
+  rule {
+    id     = "move-to-intelligent-tiering"
+    status = "Enabled"
+    filter { prefix = "" }
+
+    transition {
+      days          = 0
+      storage_class = "INTELLIGENT_TIERING"
+    }
+  }
+}

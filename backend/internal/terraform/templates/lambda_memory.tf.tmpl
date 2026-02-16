@@ -1,0 +1,25 @@
+# ============================================================================
+# Lambda Function Memory Rightsizing
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Current: {{.MemorySize}} MB -> Recommended: {{.NewMemorySize}} MB
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# Note: Memory affects CPU allocation. More memory can mean faster execution.
+# terraform import aws_lambda_function.{{.ResourceName}} {{.ResourceID}}
+# ============================================================================
+
+resource "aws_lambda_function" "{{.ResourceName}}" {
+  function_name = "{{.ResourceName}}"
+  memory_size   = {{.NewMemorySize}}
+
+  tags = {
+    ManagedBy      = "terraform"
+    FinOpsMind     = "memory-optimized"
+    PreviousMemory = "{{.MemorySize}}"
+  }
+
+  lifecycle {
+    ignore_changes = [filename, source_code_hash, last_modified]
+  }
+}

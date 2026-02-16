@@ -1,0 +1,26 @@
+# ============================================================================
+# EBS Volume Upgrade: GP2 to GP3
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Current: {{.VolumeType}} -> New: gp3
+# Size: {{.VolumeSize}} GB | IOPS: {{.IOPS}} | Throughput: {{.Throughput}} MB/s
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# GP3 is 20% cheaper with independent IOPS/throughput. Non-disruptive migration.
+# terraform import aws_ebs_volume.{{.ResourceName}} {{.ResourceID}}
+# ============================================================================
+
+resource "aws_ebs_volume" "{{.ResourceName}}" {
+  availability_zone = "{{.Region}}a"
+  size              = {{.VolumeSize}}
+  type              = "gp3"
+  iops              = {{.IOPS}}
+  throughput        = {{.Throughput}}
+
+  tags = {
+    Name         = "{{.ResourceName}}"
+    ManagedBy    = "terraform"
+    FinOpsMind   = "gp3-upgraded"
+    PreviousType = "{{.VolumeType}}"
+  }
+}

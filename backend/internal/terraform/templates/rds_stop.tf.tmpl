@@ -1,0 +1,16 @@
+# ============================================================================
+# RDS Instance Stop (Idle Database)
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Resource: {{.ResourceID}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# Note: Still incurs storage charges. Auto-starts after 7 days.
+# ============================================================================
+
+resource "null_resource" "stop_rds_{{.ResourceName}}" {
+  provisioner "local-exec" {
+    command = "aws rds stop-db-instance --db-instance-identifier {{.ResourceID}} --region {{.Region}}"
+  }
+  triggers = { instance_id = "{{.ResourceID}}" }
+}

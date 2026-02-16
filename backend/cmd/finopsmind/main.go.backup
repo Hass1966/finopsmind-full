@@ -1,0 +1,163 @@
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	
+	"github.com/finopsmind/backend/internal/handler"
+	"github.com/finopsmind/backend/internal/jobs"
+	"github.com/finopsmind/backend/internal/ml"
+	"github.com/finopsmind/backend/internal/model"
+)
+
+func main() {
+	// Configuration
+	port := getEnv("PORT", "8080")
+	mlSidecarURL := getEnv("ML_SIDECAR_URL", "http://ml-sidecar:8081")
+	
+	// Initialize ML client
+	mlClient := ml.NewClient(mlSidecarURL, 30*time.Second)
+	
+	// Initialize stores (placeholder - implement with real DB connection)
+	// store := postgres.NewCostStore(db)
+	var store model.CostStore // Placeholder
+	
+	// Initialize handlers
+	forecastHandler := handler.NewForecastHandler(mlClient, store)
+	anomalyHandler := handler.NewAnomalyHandler(mlClient, store)
+	
+	// Setup router
+	r := chi.NewRouter()
+	
+	// Middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Timeout(60 * time.Second))
+	
+	// CORS
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "https://*.finopsmind.io"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+	
+	// Health check
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		// Check ML sidecar health
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		
+		mlHealth, err := mlClient.Health(ctx)
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"unhealthy","ml_sidecar":"unavailable"}`))
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"healthy","ml_sidecar":"` + mlHealth.Status + `"}`))
+	})
+	
+	// API v1 routes
+	r.Route("/api/v1", func(r chi.Router) {
+		// Forecast endpoints
+		r.Route("/forecast", func(r chi.Router) {
+			r.Get("/", forecastHandler.GetForecast)
+			r.Post("/", forecastHandler.PostForecast)
+		})
+		
+		// Anomaly endpoints
+		r.Route("/anomalies", func(r chi.Router) {
+			r.Get("/", anomalyHandler.GetAnomalies)
+			r.Post("/detect", anomalyHandler.PostAnomalies)
+			r.Post("/score", anomalyHandler.GetAnomalyScore)
+		})
+		
+		// ML management endpoints
+		r.Route("/ml", func(r chi.Router) {
+			r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+				ctx := r.Context()
+				health, err := mlClient.Health(ctx)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusServiceUnavailable)
+					return
+				}
+				handler.WriteJSON(w, http.StatusOK, health)
+			})
+			
+			r.Delete("/cache", func(w http.ResponseWriter, r *http.Request) {
+				ctx := r.Context()
+				if err := mlClient.ClearCache(ctx); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(http.StatusNoContent)
+			})
+		})
+	})
+	
+	// Create server
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	
+	// Start background jobs
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	
+	// Initialize job runner (with placeholder accounts list)
+	accounts := []string{"default-account"} // Load from config/DB
+	jobRunner := jobs.NewMLJobRunner(mlClient, store, accounts)
+	_ = jobRunner // Scheduler disabled for now
+	_ = ctx
+	
+	// Graceful shutdown
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+		
+		log.Println("Shutting down server...")
+		cancel() // Stop background jobs
+		
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
+		
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Server shutdown error: %v", err)
+		}
+	}()
+	
+	// Start server
+	log.Printf("FinOpsMind API server starting on port %s", port)
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("Server error: %v", err)
+	}
+	
+	log.Println("Server stopped")
+}
+
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}

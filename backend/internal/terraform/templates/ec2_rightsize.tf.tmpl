@@ -1,0 +1,31 @@
+# ============================================================================
+# EC2 Instance Rightsizing
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Generated at: {{.GeneratedAt}}
+# Current: {{.InstanceType}} -> Recommended: {{.NewInstanceType}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}} | Annual: ${{printf "%.2f" .AnnualSavings}}
+# Confidence: {{printf "%.0f" .Confidence}}%
+#
+# IMPORTANT: Requires instance stop/start. Schedule during maintenance.
+# terraform import aws_instance.{{.ResourceName}} {{.ResourceID}}
+# ============================================================================
+
+resource "aws_instance" "{{.ResourceName}}" {
+  instance_type = "{{.NewInstanceType}}"
+
+  tags = {
+    Name                = "{{.ResourceName}}"
+    ManagedBy           = "terraform"
+    FinOpsMind          = "rightsized"
+    PreviousInstanceType = "{{.InstanceType}}"
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+output "{{.ResourceName}}_instance_type" {
+  value = aws_instance.{{.ResourceName}}.instance_type
+}

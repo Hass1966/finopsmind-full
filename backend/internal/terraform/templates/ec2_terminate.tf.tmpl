@@ -1,0 +1,15 @@
+# ============================================================================
+# EC2 Instance Termination (Unused Resource)
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Resource: {{.ResourceID}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# WARNING: IRREVERSIBLE! Backup data and create AMI if needed.
+# terraform import aws_instance.{{.ResourceName}}_to_terminate {{.ResourceID}}
+# terraform destroy -target=aws_instance.{{.ResourceName}}_to_terminate
+# ============================================================================
+
+resource "aws_instance" "{{.ResourceName}}_to_terminate" {
+  lifecycle { prevent_destroy = false }
+}

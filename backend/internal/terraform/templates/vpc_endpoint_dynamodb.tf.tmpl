@@ -1,0 +1,25 @@
+# ============================================================================
+# VPC Gateway Endpoint for DynamoDB
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# VPC: {{.VPCId}} | Region: {{.Region}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+# ============================================================================
+
+resource "aws_vpc_endpoint" "dynamodb_gateway" {
+  vpc_id            = "{{.VPCId}}"
+  service_name      = "com.amazonaws.{{.Region}}.dynamodb"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = [
+    {{- range $i, $rt := .RouteTableIds}}
+    {{if $i}},{{end}}"{{$rt}}"
+    {{- end}}
+  ]
+
+  tags = {
+    Name       = "dynamodb-gateway-endpoint"
+    ManagedBy  = "terraform"
+    FinOpsMind = "cost-optimization"
+  }
+}

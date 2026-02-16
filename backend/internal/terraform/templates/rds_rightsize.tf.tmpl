@@ -1,0 +1,28 @@
+# ============================================================================
+# RDS Instance Rightsizing
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# Current: {{.DBInstanceClass}} -> Recommended: {{.NewDBInstanceClass}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# WARNING: Brief outage during modification. Use maintenance window.
+# terraform import aws_db_instance.{{.ResourceName}} {{.ResourceID}}
+# ============================================================================
+
+resource "aws_db_instance" "{{.ResourceName}}" {
+  identifier     = "{{.ResourceName}}"
+  instance_class = "{{.NewDBInstanceClass}}"
+  apply_immediately = false
+
+  tags = {
+    Name                  = "{{.ResourceName}}"
+    ManagedBy             = "terraform"
+    FinOpsMind            = "rightsized"
+    PreviousInstanceClass = "{{.DBInstanceClass}}"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [password]
+  }
+}

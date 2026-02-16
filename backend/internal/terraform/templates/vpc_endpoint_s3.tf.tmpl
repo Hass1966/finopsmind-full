@@ -1,0 +1,31 @@
+# ============================================================================
+# VPC Gateway Endpoint for S3
+# ============================================================================
+# Recommendation ID: {{.RecommendationID}}
+# VPC: {{.VPCId}} | Region: {{.Region}}
+# Monthly savings: ${{printf "%.2f" .MonthlySavings}}
+#
+# Gateway endpoints are FREE. Eliminates S3 data transfer charges.
+# ============================================================================
+
+resource "aws_vpc_endpoint" "s3_gateway" {
+  vpc_id            = "{{.VPCId}}"
+  service_name      = "com.amazonaws.{{.Region}}.s3"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = [
+    {{- range $i, $rt := .RouteTableIds}}
+    {{if $i}},{{end}}"{{$rt}}"
+    {{- end}}
+  ]
+
+  tags = {
+    Name       = "s3-gateway-endpoint"
+    ManagedBy  = "terraform"
+    FinOpsMind = "cost-optimization"
+  }
+}
+
+output "s3_endpoint_id" {
+  value = aws_vpc_endpoint.s3_gateway.id
+}

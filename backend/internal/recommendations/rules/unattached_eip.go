@@ -1,0 +1,5 @@
+package rules
+import("fmt";rec"github.com/finopsmind/backend/internal/recommendations")
+type UnattachedEIPRule struct{BaseRule}
+func NewUnattachedEIPRule()*UnattachedEIPRule{return&UnattachedEIPRule{BaseRule:BaseRule{id:"unattached-eip",name:"Unattached Elastic IPs",description:"EIPs not associated with any resource",resourceTypes:[]string{"aws_eip"}}}}
+func(r*UnattachedEIPRule)Evaluate(ctx*rec.RuleContext)([]rec.Recommendation,error){q:=`SELECT e.allocation_id,e.public_ip,e.account_id,e.region FROM elastic_ips e WHERE e.association_id IS NULL OR e.association_id=''`;rows,err:=ctx.DB.Query(q);if err!=nil{return nil,err};defer rows.Close();var recs[]rec.Recommendation;for rows.Next(){var allocID,publicIP,acct,region string;if err:=rows.Scan(&allocID,&publicIP,&acct,&region);err!=nil{continue};r:=newRec(r.id,allocID,"elastic_ip","",acct,region,rec.TypeUnattachedResource,fmt.Sprintf("EIP %s (%s) not associated",publicIP,allocID),"Release the Elastic IP",3.60,rec.ConfidenceHigh);r.TerraformCode=fmt.Sprintf("# Release EIP: %s\n# aws ec2 release-address --allocation-id %s",allocID,allocID);recs=append(recs,r)};return recs,rows.Err()}
