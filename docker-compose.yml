@@ -63,6 +63,12 @@ services:
       - PORT=8080
       - ML_SIDECAR_URL=http://ml-sidecar:8081
       - DATABASE_URL=postgres://finopsmind:finopsmind_secret@postgres:5432/finopsmind?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=finopsmind
+      - DB_PASSWORD=finopsmind_secret
+      - DB_NAME=finopsmind
+      - JWT_SECRET=change-this-to-a-long-random-string-at-least-32-chars
       - REDIS_URL=redis://redis:6379
       - ENVIRONMENT=development
     ports:
