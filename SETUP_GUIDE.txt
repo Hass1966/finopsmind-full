@@ -1,0 +1,625 @@
+================================================================================
+                        FINOPSMIND - SETUP & LAUNCH GUIDE
+================================================================================
+
+Table of Contents:
+  1. Prerequisites
+  2. Quick Start (Docker Compose)
+  3. Running Services Individually (Development)
+  4. Create Your Account
+  5. Connect AWS Account
+  6. Connect Azure Account
+  7. Verify Everything Works
+  8. API Reference (All Endpoints)
+  9. Troubleshooting
+
+================================================================================
+1. PREREQUISITES
+================================================================================
+
+You need these installed on your machine:
+
+  - Docker & Docker Compose    (https://docs.docker.com/get-docker/)
+  - Git                        (already done if you cloned the repo)
+
+For development without Docker you also need:
+
+  - Go 1.23+                   (https://go.dev/dl/)
+  - Node.js 20+                (https://nodejs.org/)
+  - Python 3.11+               (https://python.org/)
+  - PostgreSQL 15+             (https://postgresql.org/)
+  - Redis 7+                   (https://redis.io/)
+
+
+================================================================================
+2. QUICK START (DOCKER COMPOSE)
+================================================================================
+
+This is the fastest way to get everything running.
+
+Step 1 - Clone the repo:
+
+    git clone https://github.com/Hass1966/finopsmind-full.git
+    cd finopsmind-full
+
+Step 2 - Configure environment:
+
+    cp .env.example .env
+
+    Open .env in a text editor and set at minimum:
+
+        DB_PASSWORD=finopsmind_secret
+        JWT_SECRET=pick-a-random-string-at-least-32-characters-long
+
+    (AWS and Azure can be configured later, see sections 5 and 6)
+
+Step 3 - Launch all services:
+
+    docker compose up --build
+
+    This starts 5 services:
+        Frontend        http://localhost:3000    (React UI)
+        Backend API     http://localhost:8080    (Go REST API)
+        ML Sidecar      http://localhost:8081    (Python FastAPI)
+        PostgreSQL      localhost:5432           (Database)
+        Redis           localhost:6379           (Cache)
+
+    Wait until you see:
+        "FinOpsMind API server starting" in the logs
+
+Step 4 - Open the app:
+
+    Open http://localhost:3000 in your browser.
+    You should see the login page.
+
+To stop everything:
+
+    docker compose down
+
+To stop and remove all data (fresh start):
+
+    docker compose down -v
+
+
+================================================================================
+3. RUNNING SERVICES INDIVIDUALLY (DEVELOPMENT)
+================================================================================
+
+If you prefer running services outside Docker for development:
+
+--- 3a. Start Database and Redis ---
+
+    docker compose up postgres redis -d
+
+    This starts just Postgres and Redis in the background.
+
+--- 3b. Run Database Migrations ---
+
+    psql -h localhost -U finopsmind -d finopsmind -f backend/migrations/000001_initial_schema.up.sql
+    psql -h localhost -U finopsmind -d finopsmind -f backend/migrations/000002_seed_data.up.sql
+    psql -h localhost -U finopsmind -d finopsmind -f backend/migrations/000005_users.up.sql
+
+    Password when prompted: finopsmind_secret
+
+--- 3c. Start the ML Sidecar ---
+
+    cd ml-sidecar
+    pip install -r requirements.txt
+    uvicorn app.main:app --port 8081
+
+--- 3d. Start the Backend ---
+
+    cd backend
+
+    export DB_HOST=localhost
+    export DB_PORT=5432
+    export DB_USER=finopsmind
+    export DB_PASSWORD=finopsmind_secret
+    export DB_NAME=finopsmind
+    export JWT_SECRET=your-secret-key-at-least-32-chars-long
+    export ML_SIDECAR_URL=http://localhost:8081
+
+    go run ./cmd/finopsmind/
+
+    You should see: "FinOpsMind API server starting"
+
+--- 3e. Start the Frontend ---
+
+    cd frontend
+    npm install
+    npm run dev
+
+    Opens on http://localhost:3000
+    The Vite dev server proxies API calls to localhost:8080 automatically.
+
+
+================================================================================
+4. CREATE YOUR ACCOUNT
+================================================================================
+
+--- Option A: Via the Web UI ---
+
+    1. Open http://localhost:3000
+    2. Click "Sign up" on the login page
+    3. Fill in:
+        - First Name
+        - Last Name
+        - Email address
+        - Password (minimum 8 characters)
+        - Organization Name (e.g. "My Company")
+    4. Click Sign Up
+    5. You are logged in and taken to the Dashboard
+
+--- Option B: Via the API (curl) ---
+
+    curl -X POST http://localhost:8080/api/v1/auth/signup \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "admin@yourcompany.com",
+        "password": "yourpassword123",
+        "first_name": "Your",
+        "last_name": "Name",
+        "organization_name": "Your Company"
+      }'
+
+    Response includes a JWT token:
+    {
+      "token": "eyJhbGciOi...",
+      "user": { "email": "admin@yourcompany.com", ... }
+    }
+
+--- Option C: Login to an existing account ---
+
+    curl -X POST http://localhost:8080/api/v1/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "admin@yourcompany.com",
+        "password": "yourpassword123"
+      }'
+
+Save the token for API calls:
+
+    export TOKEN="eyJhbGciOi..."
+
+
+================================================================================
+5. CONNECT AWS ACCOUNT
+================================================================================
+
+--- Step 1: Create an IAM User in AWS ---
+
+    1. Go to AWS Console -> IAM -> Users -> Create user
+    2. User name: finopsmind-reader
+    3. Do NOT enable console access (API only)
+    4. Click Next
+
+--- Step 2: Attach Permissions ---
+
+    Option A (Quick - broader read access):
+        Attach the managed policy: ReadOnlyAccess
+
+    Option B (Minimal - recommended for production):
+        Click "Create inline policy" -> JSON tab -> paste:
+
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "FinOpsMindCostExplorer",
+              "Effect": "Allow",
+              "Action": [
+                "ce:GetCostAndUsage",
+                "ce:GetCostForecast",
+                "ce:GetRightsizingRecommendation",
+                "ce:GetReservationPurchaseRecommendation",
+                "ce:GetSavingsPlansPurchaseRecommendation",
+                "ce:GetReservationUtilization",
+                "ce:GetSavingsPlansUtilization"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+
+        Name the policy: FinOpsMindCostReader
+
+--- Step 3: Create Access Key ---
+
+    1. Go to the user -> Security credentials tab
+    2. Create access key -> "Application running outside AWS"
+    3. Copy the Access Key ID and Secret Access Key
+       (you won't be able to see the secret again)
+
+--- Step 4: Update .env ---
+
+    Open .env and set:
+
+        AWS_ENABLED=true
+        AWS_ACCESS_KEY_ID=AKIA...your-access-key-id...
+        AWS_SECRET_ACCESS_KEY=your-secret-access-key
+        AWS_REGION=us-east-1
+
+    Change AWS_REGION to match your primary region if different.
+
+--- Step 5: Restart ---
+
+    docker compose down && docker compose up --build
+
+--- Step 6: Verify ---
+
+    Log in to the UI at http://localhost:3000
+    The Dashboard should show an "AWS" badge in green (top right).
+
+    Or via API:
+
+        curl -H "Authorization: Bearer $TOKEN" \
+          http://localhost:8080/api/v1/providers
+
+    Expected response:
+    [
+      {
+        "id": "aws",
+        "name": "aws",
+        "status": "connected",
+        "healthy": true,
+        "message": "AWS provider healthy"
+      }
+    ]
+
+--- Note on AWS Cost Explorer ---
+
+    AWS Cost Explorer data is available ~24 hours after costs are incurred.
+    If your account is brand new or has very low usage, you may see $0.00
+    amounts, but the connection will still show as healthy.
+
+    Cost Explorer itself costs $0.01 per API request. Normal usage of
+    FinOpsMind will cost a few cents per month in Cost Explorer fees.
+
+--- Cross-Account Access (Optional) ---
+
+    If you want to read costs from a different AWS account:
+
+    1. In the TARGET account, create an IAM Role:
+       - Trusted entity: your main account ID
+       - Attach the FinOpsMindCostReader policy
+       - Note the Role ARN
+
+    2. In .env, add:
+       AWS_ASSUME_ROLE_ARN=arn:aws:iam::123456789012:role/FinOpsMindRole
+       AWS_EXTERNAL_ID=any-random-string-for-security
+
+
+================================================================================
+6. CONNECT AZURE ACCOUNT
+================================================================================
+
+--- Step 1: Create an App Registration ---
+
+    1. Go to Azure Portal -> Microsoft Entra ID -> App registrations
+    2. Click "New registration"
+    3. Name: finopsmind-reader
+    4. Supported account types: Single tenant
+    5. Click Register
+
+    From the overview page, note:
+        Application (client) ID:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        Directory (tenant) ID:     xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+--- Step 2: Create a Client Secret ---
+
+    1. In your app registration, go to "Certificates & secrets"
+    2. Click "New client secret"
+    3. Description: finopsmind
+    4. Expiry: 12 months (or your preference)
+    5. Click Add
+    6. IMMEDIATELY copy the "Value" (not the Secret ID)
+       You cannot see it again after leaving this page.
+
+--- Step 3: Grant Cost Management Access ---
+
+    1. Go to Azure Portal -> Subscriptions -> select your subscription
+    2. Note the Subscription ID from the overview
+    3. Go to "Access control (IAM)" -> Add role assignment
+    4. Role: "Cost Management Reader"
+    5. Members: select your app registration (finopsmind-reader)
+    6. Click Review + assign
+
+--- Step 4: Update .env ---
+
+    Open .env and set:
+
+        AZURE_ENABLED=true
+        AZURE_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        AZURE_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        AZURE_CLIENT_SECRET=the-secret-value-you-copied
+        AZURE_SUBSCRIPTION_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+--- Step 5: Restart ---
+
+    docker compose down && docker compose up --build
+
+--- Step 6: Verify ---
+
+    The Dashboard should show an "AZURE" badge in green.
+
+    Or via API:
+
+        curl -H "Authorization: Bearer $TOKEN" \
+          http://localhost:8080/api/v1/providers
+
+    Expected: both AWS and Azure show as "connected" / "healthy".
+
+--- Note on Azure Costs ---
+
+    Azure Cost Management data can take up to 72 hours to appear for
+    new subscriptions. Even with minimal usage, the connection health
+    check verifies authentication is working correctly.
+
+
+================================================================================
+7. VERIFY EVERYTHING WORKS
+================================================================================
+
+Once running, test each major feature:
+
+--- Health Check (no auth needed) ---
+
+    curl http://localhost:8080/health
+
+    Expected: {"status":"healthy","ml_sidecar":"..."}
+
+--- Login and Get Token ---
+
+    TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"email":"your@email.com","password":"yourpassword"}' \
+      | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+    echo $TOKEN
+
+--- Test Core Features ---
+
+    # Cost Summary (real AWS/Azure data or mock fallback)
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/costs/summary | python3 -m json.tool
+
+    # Cost Trend
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/costs/trend | python3 -m json.tool
+
+    # Anomalies
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/anomalies | python3 -m json.tool
+
+    # Budgets
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/budgets | python3 -m json.tool
+
+    # Recommendations
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/recommendations | python3 -m json.tool
+
+    # Providers (shows AWS/Azure connection status)
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/providers | python3 -m json.tool
+
+--- Test Phase B Features ---
+
+    # Cost Allocation
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/allocations | python3 -m json.tool
+
+    # Executive Summary Report
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/reports/executive-summary | python3 -m json.tool
+
+    # Cost Comparison (month over month)
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/reports/comparison | python3 -m json.tool
+
+    # Export CSV
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/reports/export/csv
+
+--- Test Phase C Features ---
+
+    # Remediation Summary
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/remediations/summary | python3 -m json.tool
+
+    # Auto-Approval Rules
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/remediations/rules | python3 -m json.tool
+
+    # Policy Engine
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/policies | python3 -m json.tool
+
+    # Policy Violations
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/policies/violations | python3 -m json.tool
+
+    # AI Chat
+    curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"message": "What are my costs this month?"}' \
+      http://localhost:8080/api/v1/chat | python3 -m json.tool
+
+--- Test Phase D Features ---
+
+    # Kubernetes Costs
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/kubernetes/clusters | python3 -m json.tool
+
+    # Unit Economics
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/unit-economics | python3 -m json.tool
+
+    # Commitment Portfolio
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/commitments/portfolio | python3 -m json.tool
+
+    # Drift Detection
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/drift/summary | python3 -m json.tool
+
+
+================================================================================
+8. API REFERENCE (ALL ENDPOINTS)
+================================================================================
+
+Base URL: http://localhost:8080/api/v1
+Auth: Header "Authorization: Bearer <token>" on all protected routes
+
+PUBLIC (no auth):
+  POST   /auth/login                    Login, get JWT token
+  POST   /auth/signup                   Create account + org
+
+PROTECTED:
+  --- Auth ---
+  GET    /auth/me                       Current user profile
+  POST   /auth/api-keys                 Generate API key
+
+  --- Costs ---
+  GET    /costs/summary                 Cost summary (by service)
+  GET    /costs/trend                   Cost trend over time
+  GET    /costs/breakdown               Cost breakdown by dimension
+  GET    /costs/export                  Export costs as CSV
+
+  --- Budgets ---
+  GET    /budgets                       List budgets
+  POST   /budgets                       Create budget
+  GET    /budgets/{id}                  Get budget by ID
+  PUT    /budgets/{id}                  Update budget
+  DELETE /budgets/{id}                  Delete budget
+
+  --- Anomalies ---
+  GET    /anomalies                     List anomalies
+  GET    /anomalies/summary             Anomaly summary
+  PATCH  /anomalies/{id}               Update anomaly
+  POST   /anomalies/{id}/acknowledge   Acknowledge anomaly
+  POST   /anomalies/{id}/resolve       Resolve anomaly
+
+  --- Recommendations ---
+  GET    /recommendations               List recommendations
+  PATCH  /recommendations/{id}         Update recommendation
+
+  --- Forecasts ---
+  GET    /forecasts                     Get forecasts
+
+  --- Providers ---
+  GET    /providers                     List cloud providers + health
+
+  --- Cost Allocation ---
+  GET    /allocations                   Cost allocation by team
+  GET    /allocations/untagged          Untagged resources
+
+  --- Reports ---
+  GET    /reports/executive-summary     Executive cost summary
+  GET    /reports/comparison            Period-over-period comparison
+  GET    /reports/export/csv            Export report as CSV
+  GET    /reports/export/json           Export report as JSON
+
+  --- AI Chat ---
+  POST   /chat                          Chat with AI assistant
+
+  --- Policies ---
+  GET    /policies                      List policies
+  POST   /policies                      Create policy
+  GET    /policies/summary              Policy compliance summary
+  GET    /policies/violations           List violations
+  GET    /policies/{id}                 Get policy by ID
+
+  --- Remediation ---
+  GET    /remediations                  List remediation actions
+  POST   /remediations                  Propose new action
+  GET    /remediations/summary          Remediation summary
+  GET    /remediations/{id}             Get action by ID
+  POST   /remediations/{id}/approve    Approve action
+  POST   /remediations/{id}/reject     Reject action
+  POST   /remediations/{id}/cancel     Cancel action
+  POST   /remediations/{id}/rollback   Rollback action
+  GET    /remediations/rules            List auto-approval rules
+  POST   /remediations/rules            Create rule
+  PUT    /remediations/rules/{id}      Update rule
+  DELETE /remediations/rules/{id}      Delete rule
+
+  --- Kubernetes ---
+  GET    /kubernetes/clusters           K8s cluster costs
+  GET    /kubernetes/namespaces         Namespace cost breakdown
+  GET    /kubernetes/rightsizing        Pod rightsizing recommendations
+
+  --- Unit Economics ---
+  GET    /unit-economics                Cost per business metric
+
+  --- Commitments ---
+  GET    /commitments/portfolio         RI/Savings Plan portfolio
+
+  --- Drift Detection ---
+  GET    /drift/summary                 IaC drift summary
+
+  --- ML ---
+  GET    /ml/health                     ML sidecar health
+
+  --- Settings ---
+  GET    /settings                      Get org settings
+  PUT    /settings                      Update org settings
+
+
+================================================================================
+9. TROUBLESHOOTING
+================================================================================
+
+PROBLEM: "DB_PASSWORD is required" error on startup
+  -> Make sure .env has DB_PASSWORD set (e.g. DB_PASSWORD=finopsmind_secret)
+
+PROBLEM: "JWT_SECRET is required" error on startup
+  -> Make sure .env has JWT_SECRET set (minimum 32 characters)
+
+PROBLEM: Frontend shows blank page
+  -> Check browser console for errors
+  -> Make sure backend is running on port 8080
+  -> Check that CORS allows localhost:3000 (it does by default)
+
+PROBLEM: AWS provider shows "disconnected"
+  -> Verify AWS_ENABLED=true in .env
+  -> Verify AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct
+  -> Check that the IAM user has ce:GetCostAndUsage permission
+  -> Check backend logs: docker compose logs backend
+
+PROBLEM: Azure provider shows "disconnected"
+  -> Verify AZURE_ENABLED=true in .env
+  -> Verify all 4 Azure values are correct (tenant, client, secret, subscription)
+  -> Check that the app registration has "Cost Management Reader" role
+  -> The client secret may have expired - create a new one in Azure portal
+
+PROBLEM: "connection refused" on localhost:8080
+  -> Wait 10-15 seconds for the backend to fully start
+  -> Check: docker compose ps  (all services should be "Up")
+  -> Check logs: docker compose logs backend
+
+PROBLEM: Database connection fails
+  -> Check: docker compose ps postgres  (should be "Up (healthy)")
+  -> Try: docker compose down -v && docker compose up --build
+  -> This resets the database from scratch
+
+PROBLEM: Costs show as $0 or mock data
+  -> AWS Cost Explorer data takes ~24 hours to populate for new accounts
+  -> Check that the background cost sync job has run (runs every 6 hours)
+  -> Force a sync by restarting: docker compose restart backend
+  -> Endpoints return mock data when no real data is available in the DB
+
+PROBLEM: ML sidecar is unhealthy
+  -> Check: docker compose logs ml-sidecar
+  -> Try: docker compose restart ml-sidecar
+  -> The app works without the ML sidecar (just no ML-powered features)
+
+PROBLEM: Port already in use
+  -> Change ports in docker-compose.yml or stop conflicting services
+  -> Common conflicts: port 3000 (other Node apps), 5432 (local Postgres)
+
+For more help: https://github.com/Hass1966/finopsmind-full/issues
+
+================================================================================
+                            END OF SETUP GUIDE
+================================================================================
