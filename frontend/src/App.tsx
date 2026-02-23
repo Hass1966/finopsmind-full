@@ -61,6 +61,13 @@ function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (v: boolea
   )
 }
 
+function AuthRedirect() {
+  const { isAuthenticated, isLoading } = useAuth()
+  if (isLoading) return <LoadingSpinner />
+  if (isAuthenticated) return <Navigate to="/" replace />
+  return <LoginPage />
+}
+
 function ProtectedLayout() {
   const { isAuthenticated, isLoading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -106,7 +113,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<AuthRedirect />} />
           <Route path="/*" element={<ProtectedLayout />} />
         </Routes>
       </BrowserRouter>

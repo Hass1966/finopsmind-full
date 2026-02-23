@@ -50,15 +50,12 @@ func (h *AnomalyDBHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	anomalies, total, err := h.repo.List(ctx, filter, pagination)
 	if err != nil {
-		// Fall back to mock
-		GetAnomaliesMock(w, r)
+		writeError(w, http.StatusInternalServerError, "failed to list anomalies")
 		return
 	}
 
-	if total == 0 {
-		// No data in DB, return mock
-		GetAnomaliesMock(w, r)
-		return
+	if anomalies == nil {
+		anomalies = []*model.Anomaly{}
 	}
 
 	// Count stats

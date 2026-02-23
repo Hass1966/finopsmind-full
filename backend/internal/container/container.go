@@ -13,6 +13,7 @@ import (
 	"github.com/finopsmind/backend/internal/config"
 	"github.com/finopsmind/backend/internal/jobs"
 	"github.com/finopsmind/backend/internal/mlclient"
+	"github.com/finopsmind/backend/internal/model"
 	"github.com/finopsmind/backend/internal/provider"
 	"github.com/finopsmind/backend/internal/provider/aws"
 	"github.com/finopsmind/backend/internal/provider/azure"
@@ -36,6 +37,9 @@ type Container struct {
 	organizationRepo   repository.OrganizationRepository
 	userRepo           repository.UserRepository
 	remediationRepo    repository.RemediationRepository
+	cloudProviderRepo  repository.CloudProviderRepository
+
+	encryptionKey string
 }
 
 // New creates a new dependency container.
@@ -72,6 +76,8 @@ func New(cfg *config.Config, logger *slog.Logger) (*Container, error) {
 	c.organizationRepo = repository.NewPostgresOrganizationRepository(db)
 	c.userRepo = repository.NewPostgresUserRepository(db)
 	c.remediationRepo = repository.NewPostgresRemediationRepository(db)
+	c.cloudProviderRepo = repository.NewPostgresCloudProviderRepository(db)
+	c.encryptionKey = cfg.EncryptionKey
 
 	// Initialize ML client
 	c.mlClient = mlclient.NewClient(cfg.MLSidecar)
@@ -155,16 +161,34 @@ func (c *Container) AnomalyRepository() repository.AnomalyRepository { return c.
 func (c *Container) OrganizationRepository() repository.OrganizationRepository { return c.organizationRepo }
 func (c *Container) UserRepository() repository.UserRepository { return c.userRepo }
 func (c *Container) RemediationRepository() repository.RemediationRepository { return c.remediationRepo }
+func (c *Container) CloudProviderRepository() repository.CloudProviderRepository { return c.cloudProviderRepo }
 
 // Background job implementations
 
 func (c *Container) costSyncJob(ctx context.Context) error {
 	c.logger.Info("running cost sync job")
 
-	for name, prov := range c.providerRegistry.All() {
-		c.logger.Info("syncing costs from provider", "provider", name)
+	enabledProviders, err := c.cloudProviderRepo.GetAllEnabled(ctx)
+	if err != nil {
+		c.logger.Error("failed to get enabled providers", "error", err)
+		return err
+	}
 
-		// Get costs for the last 30 days
+	if len(enabledProviders) == 0 {
+		c.logger.Info("no enabled providers configured, skipping cost sync")
+		return nil
+	}
+
+	for _, cp := range enabledProviders {
+		c.logger.Info("syncing costs from provider", "provider", cp.ProviderType, "org", cp.OrganizationID)
+
+		prov, err := provider.NewProviderFromEncryptedCreds(string(cp.ProviderType), cp.Credentials, c.encryptionKey, c.logger)
+		if err != nil {
+			c.logger.Error("failed to instantiate provider", "provider", cp.ProviderType, "error", err)
+			c.cloudProviderRepo.UpdateStatus(ctx, cp.ID, "error", err.Error())
+			continue
+		}
+
 		endDate := time.Now()
 		startDate := endDate.AddDate(0, 0, -30)
 
@@ -174,12 +198,41 @@ func (c *Container) costSyncJob(ctx context.Context) error {
 			Granularity: "daily",
 			GroupBy:     []string{"service"},
 		})
+		prov.Close()
+
 		if err != nil {
-			c.logger.Error("failed to sync costs", "provider", name, "error", err)
+			c.logger.Error("failed to fetch costs", "provider", cp.ProviderType, "error", err)
+			c.cloudProviderRepo.UpdateStatus(ctx, cp.ID, "error", "sync failed: "+err.Error())
 			continue
 		}
 
-		c.logger.Info("cost sync completed", "provider", name, "records", len(costs.Costs), "total", costs.TotalAmount)
+		// Convert to CostRecords and persist
+		var records []*model.CostRecord
+		for _, item := range costs.Costs {
+			records = append(records, &model.CostRecord{
+				BaseEntity:     model.NewBaseEntity(),
+				OrganizationID: cp.OrganizationID,
+				Date:           item.Date,
+				Amount:         item.Amount,
+				Currency:       model.CurrencyUSD,
+				Provider:       cp.ProviderType,
+				Service:        item.Service,
+				AccountID:      item.AccountID,
+				Region:         item.Region,
+			})
+		}
+
+		if len(records) > 0 {
+			if err := c.costRepo.CreateBatch(ctx, records); err != nil {
+				c.logger.Error("failed to persist costs", "provider", cp.ProviderType, "error", err)
+				c.cloudProviderRepo.UpdateStatus(ctx, cp.ID, "error", "persist failed: "+err.Error())
+				continue
+			}
+		}
+
+		c.cloudProviderRepo.UpdateStatus(ctx, cp.ID, "connected", "sync completed")
+		c.cloudProviderRepo.UpdateLastSync(ctx, cp.ID)
+		c.logger.Info("cost sync completed", "provider", cp.ProviderType, "records", len(records), "total", costs.TotalAmount)
 	}
 
 	return nil

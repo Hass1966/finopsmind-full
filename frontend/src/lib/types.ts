@@ -61,9 +61,48 @@ export interface Forecast {
 }
 
 export interface Provider {
+  id: string
   name: string
-  type: string
+  provider_type: string
+  type?: string
   healthy: boolean
+  enabled: boolean
+  status: string
+  status_message?: string
+  last_sync_at?: string
+  created_at?: string
+}
+
+export interface CloudProviderConfig {
+  id: string
+  name: string
+  provider_type: string
+  enabled: boolean
+  status: string
+  status_message: string
+  last_sync_at?: string
+  healthy: boolean
+}
+
+export interface AWSCredentialsInput {
+  access_key_id: string
+  secret_key: string
+  region: string
+  assume_role_arn?: string
+  external_id?: string
+}
+
+export interface AzureCredentialsInput {
+  tenant_id: string
+  client_id: string
+  client_secret: string
+  subscription_id: string
+}
+
+export interface CreateProviderRequest {
+  provider_type: string
+  name: string
+  credentials: AWSCredentialsInput | AzureCredentialsInput
 }
 
 export interface AuthUser {

@@ -19,6 +19,12 @@ import (
 	"github.com/finopsmind/backend/internal/provider"
 )
 
+func init() {
+	provider.AzureFromCredsFunc = func(creds model.AzureCredentials, logger *slog.Logger) (provider.Provider, error) {
+		return NewProviderFromCredentials(creds, logger)
+	}
+}
+
 // Provider implements the Azure cloud provider.
 type Provider struct {
 	cfg        config.AzureConfig
@@ -41,6 +47,17 @@ func NewProvider(cfg config.AzureConfig, logger *slog.Logger) (*Provider, error)
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		logger:     logger,
 	}, nil
+}
+
+// NewProviderFromCredentials creates an Azure provider from per-tenant credentials.
+func NewProviderFromCredentials(creds model.AzureCredentials, logger *slog.Logger) (*Provider, error) {
+	return NewProvider(config.AzureConfig{
+		Enabled:        true,
+		TenantID:       creds.TenantID,
+		ClientID:       creds.ClientID,
+		ClientSecret:   creds.ClientSecret,
+		SubscriptionID: creds.SubscriptionID,
+	}, logger)
 }
 
 func (p *Provider) Name() string             { return "azure" }

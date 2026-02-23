@@ -21,6 +21,12 @@ import (
 	"github.com/finopsmind/backend/internal/provider"
 )
 
+func init() {
+	provider.AwsFromCredsFunc = func(creds model.AWSCredentials, logger *slog.Logger) (provider.Provider, error) {
+		return NewProviderFromCredentials(creds, logger)
+	}
+}
+
 // Provider implements the AWS cloud provider.
 type Provider struct {
 	name         string
@@ -79,6 +85,18 @@ func NewProvider(cfg config.AWSConfig, logger *slog.Logger) (*Provider, error) {
 			MaxDelay:    30 * time.Second,
 		},
 	}, nil
+}
+
+// NewProviderFromCredentials creates an AWS provider from per-tenant credentials.
+func NewProviderFromCredentials(creds model.AWSCredentials, logger *slog.Logger) (*Provider, error) {
+	return NewProvider(config.AWSConfig{
+		Enabled:       true,
+		Region:        creds.Region,
+		AccessKeyID:   creds.AccessKeyID,
+		SecretKey:     creds.SecretKey,
+		AssumeRoleARN: creds.AssumeRoleARN,
+		ExternalID:    creds.ExternalID,
+	}, logger)
 }
 
 // Name returns the provider name.

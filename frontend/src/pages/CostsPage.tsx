@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  DollarSign, TrendingUp, ArrowUpRight, LayoutDashboard, Search, Download
+  DollarSign, TrendingUp, ArrowUpRight, LayoutDashboard, Search, Download, Settings
 } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -55,7 +55,31 @@ export default function CostsPage() {
       })
   }
 
+  const hasData = (summary?.total_cost || 0) > 0
+
   if (loadingSummary) return <LoadingSpinner />
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Cost Analysis</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <DollarSign className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">No Cost Data Yet</h2>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            Connect a cloud provider and run a sync to see your cost data here.
+          </p>
+          <a href="/settings"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+            <Settings size={16} />
+            Go to Settings
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

@@ -104,6 +104,7 @@ func main() {
 	driftHandler := handler.NewDriftHandler()
 	remediationExecutor := remediation.NewExecutor(ctr.RemediationRepository(), logger)
 	remediationHandler := handler.NewRemediationHandler(remediationExecutor)
+	cloudProviderHandler := handler.NewCloudProviderHandler(ctr.CloudProviderRepository(), ctr.CostRepository(), cfg.EncryptionKey, logger)
 
 	// Auth middleware
 	requireAuth := auth.Middleware(jwtMgr, ctr.UserRepository())
@@ -151,28 +152,13 @@ func main() {
 			// Forecasts
 			r.Get("/forecasts", handler.GetForecasts)
 
-			// Providers
-			r.Get("/providers", func(w http.ResponseWriter, r *http.Request) {
-				providers := ctr.ProviderRegistry().HealthAll(r.Context())
-				results := make([]map[string]interface{}, 0)
-				for name, health := range providers {
-					results = append(results, map[string]interface{}{
-						"id":      name,
-						"name":    name,
-						"status":  boolToStatus(health.Healthy),
-						"healthy": health.Healthy,
-						"message": health.Message,
-					})
-				}
-				// If no providers registered, show AWS as the default
-				if len(results) == 0 {
-					results = append(results, map[string]interface{}{
-						"id": "aws", "name": "AWS", "status": "configured",
-						"healthy": !cfg.AWS.Enabled, "message": "AWS provider configured",
-					})
-				}
-				handler.WriteJSON(w, http.StatusOK, results)
-			})
+			// Cloud Providers (multi-tenant)
+			r.Get("/providers", cloudProviderHandler.List)
+			r.Post("/providers", cloudProviderHandler.Create)
+			r.Put("/providers/{id}", cloudProviderHandler.Update)
+			r.Delete("/providers/{id}", cloudProviderHandler.Delete)
+			r.Post("/providers/{id}/test", cloudProviderHandler.TestConnection)
+			r.Post("/providers/{id}/sync", cloudProviderHandler.TriggerSync)
 
 			// Settings
 			r.Get("/settings", settingsHandler.Get)
@@ -288,11 +274,4 @@ func main() {
 	}
 
 	logger.Info("server stopped")
-}
-
-func boolToStatus(healthy bool) string {
-	if healthy {
-		return "connected"
-	}
-	return "disconnected"
 }

@@ -45,14 +45,7 @@ func (h *CostHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := h.repo.GetSummary(ctx, orgID, dateRange)
 	if err != nil {
-		// Fall back to mock data if DB is empty
-		GetCostSummary(w, r)
-		return
-	}
-
-	if summary.TotalCost == 0 {
-		// No data in DB yet, return mock data
-		GetCostSummary(w, r)
+		writeError(w, http.StatusInternalServerError, "failed to get cost summary")
 		return
 	}
 
@@ -118,10 +111,12 @@ func (h *CostHandler) GetTrend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	trend, err := h.repo.GetTrend(ctx, filter)
-	if err != nil || trend == nil || trend.TotalCost == 0 {
-		// Fall back to mock data
-		GetCostTrend(w, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get cost trend")
 		return
+	}
+	if trend == nil {
+		trend = &model.CostTrend{}
 	}
 
 	// Transform data points for frontend

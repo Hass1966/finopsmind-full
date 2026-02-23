@@ -84,6 +84,19 @@ type OrganizationRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
+// CloudProviderRepository manages stored cloud provider configurations.
+type CloudProviderRepository interface {
+	Create(ctx context.Context, provider *model.CloudProviderConfig) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.CloudProviderConfig, error)
+	GetByOrgID(ctx context.Context, orgID uuid.UUID) ([]*model.CloudProviderConfig, error)
+	GetByOrgAndType(ctx context.Context, orgID uuid.UUID, providerType model.CloudProvider) (*model.CloudProviderConfig, error)
+	GetAllEnabled(ctx context.Context) ([]*model.CloudProviderConfig, error)
+	Update(ctx context.Context, provider *model.CloudProviderConfig) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status, message string) error
+	UpdateLastSync(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
 // RemediationRepository manages remediation actions and auto-approval rules.
 type RemediationRepository interface {
 	// Actions

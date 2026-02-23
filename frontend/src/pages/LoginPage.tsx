@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { DollarSign } from 'lucide-react'
 
 export default function LoginPage() {
   const { login, signup } = useAuth()
+  const navigate = useNavigate()
   const [isSignup, setIsSignup] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -24,6 +26,7 @@ export default function LoginPage() {
       } else {
         await login(email, password)
       }
+      navigate('/', { replace: true })
     } catch (err: any) {
       setError(err.message || 'Authentication failed')
     } finally {

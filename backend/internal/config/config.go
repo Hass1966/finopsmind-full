@@ -10,17 +10,18 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Server     ServerConfig
-	Database   DatabaseConfig
-	Redis      RedisConfig
-	Auth       AuthConfig
-	MLSidecar  MLSidecarConfig
-	AWS        AWSConfig
-	Azure      AzureConfig
-	Jobs       JobsConfig
-	Resilience   ResilienceConfig
-	Logging      LoggingConfig
-	Notification NotificationConfig
+	Server        ServerConfig
+	Database      DatabaseConfig
+	Redis         RedisConfig
+	Auth          AuthConfig
+	MLSidecar     MLSidecarConfig
+	AWS           AWSConfig
+	Azure         AzureConfig
+	Jobs          JobsConfig
+	Resilience    ResilienceConfig
+	Logging       LoggingConfig
+	Notification  NotificationConfig
+	EncryptionKey string
 }
 
 // ServerConfig holds HTTP server settings.
@@ -213,6 +214,7 @@ func Load() (*Config, error) {
 			EmailPassword:   getEnv("NOTIFICATION_EMAIL_PASSWORD", ""),
 			WebhookURLs:     getEnv("NOTIFICATION_WEBHOOK_URLS", ""),
 		},
+		EncryptionKey: getEnv("ENCRYPTION_KEY", ""),
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -229,6 +231,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Auth.JWTSecret == "" {
 		return fmt.Errorf("JWT_SECRET is required")
+	}
+	if c.EncryptionKey == "" {
+		return fmt.Errorf("ENCRYPTION_KEY is required")
 	}
 	return nil
 }

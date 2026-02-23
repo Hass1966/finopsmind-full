@@ -23,7 +23,62 @@ export default function DashboardPage() {
   const chartData = trend?.data_points?.map(d => ({ date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cost: d.total })) || []
   const pieData = summary?.by_service?.slice(0, 6).map(s => ({ name: s.name, value: s.amount })) || []
 
+  const hasProviders = providers && providers.length > 0
+  const hasData = (summary?.total_cost || 0) > 0
+
   if (loadingSummary) return <LoadingSpinner />
+
+  // Onboarding: no providers connected
+  if (!hasProviders) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <DollarSign className="w-8 h-8 text-blue-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Welcome to FinOpsMind</h2>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            Connect your cloud provider to start tracking costs, detecting anomalies, and optimizing your cloud spend.
+          </p>
+          <a href="/settings"
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+            Connect Cloud Provider
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Providers connected but no data yet
+  if (hasProviders && !hasData) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="w-8 h-8 text-yellow-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Syncing Your Data</h2>
+          <p className="text-gray-500 mb-4 max-w-md mx-auto">
+            Your cloud providers are connected. Cost data will appear here after the first sync completes.
+            You can trigger a sync manually from Settings.
+          </p>
+          <div className="flex gap-2 justify-center">
+            {providers?.map(p => (
+              <span key={p.id || p.name} className={`px-3 py-1 rounded-full text-xs font-medium ${
+                p.status === 'connected' ? 'bg-green-100 text-green-800' :
+                p.status === 'error' ? 'bg-red-100 text-red-800' :
+                'bg-yellow-100 text-yellow-800'
+              }`}>
+                {p.name} - {p.status}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -31,8 +86,12 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
           {providers?.map(p => (
-            <span key={p.name} className={`px-3 py-1 rounded-full text-xs font-medium ${p.healthy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-              {p.name.toUpperCase()}
+            <span key={p.id || p.name} className={`px-3 py-1 rounded-full text-xs font-medium ${
+              p.status === 'connected' ? 'bg-green-100 text-green-800' :
+              p.status === 'error' ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }`}>
+              {p.name}
             </span>
           ))}
         </div>
