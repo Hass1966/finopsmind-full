@@ -51,6 +51,7 @@ type Config struct {
 	EmailSMTPPort   int
 	EmailFrom       string
 	EmailPassword   string
+	EmailRecipients []string // org-specific recipients
 	WebhookURLs     []string
 }
 
@@ -196,9 +197,13 @@ func (s *Service) sendEmail(ctx context.Context, msg Message) error {
 		auth = smtp.PlainAuth("", s.cfg.EmailFrom, s.cfg.EmailPassword, s.cfg.EmailSMTPHost)
 	}
 
-	// For now, send to the from address (self-notification).
-	// In production, this would send to configured recipients.
-	err := smtp.SendMail(addr, auth, s.cfg.EmailFrom, []string{s.cfg.EmailFrom}, []byte(body))
+	// Send to configured recipients, or fall back to from address
+	recipients := s.cfg.EmailRecipients
+	if len(recipients) == 0 {
+		recipients = []string{s.cfg.EmailFrom}
+	}
+
+	err := smtp.SendMail(addr, auth, s.cfg.EmailFrom, recipients, []byte(body))
 	if err != nil {
 		return fmt.Errorf("email send failed: %w", err)
 	}

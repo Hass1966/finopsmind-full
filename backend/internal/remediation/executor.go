@@ -2,6 +2,7 @@ package remediation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -10,19 +11,41 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/finopsmind/backend/internal/crypto"
 	"github.com/finopsmind/backend/internal/model"
 	"github.com/finopsmind/backend/internal/repository"
 )
 
 // Executor handles remediation action execution and auto-approval evaluation.
 type Executor struct {
-	repo   repository.RemediationRepository
-	logger *slog.Logger
-	mu     sync.Mutex
+	repo              repository.RemediationRepository
+	cloudProviderRepo repository.CloudProviderRepository
+	encryptionKey     string
+	logger            *slog.Logger
+	awsExecutor       *AWSExecutor
+	azureExecutor     *AzureExecutor
+	mu                sync.Mutex
 }
 
 func NewExecutor(repo repository.RemediationRepository, logger *slog.Logger) *Executor {
-	return &Executor{repo: repo, logger: logger}
+	return &Executor{
+		repo:          repo,
+		logger:        logger,
+		awsExecutor:   NewAWSExecutor(logger),
+		azureExecutor: NewAzureExecutor(logger),
+	}
+}
+
+// NewExecutorWithCloudAccess creates an executor that can make real cloud API calls.
+func NewExecutorWithCloudAccess(repo repository.RemediationRepository, cloudProviderRepo repository.CloudProviderRepository, encryptionKey string, logger *slog.Logger) *Executor {
+	return &Executor{
+		repo:              repo,
+		cloudProviderRepo: cloudProviderRepo,
+		encryptionKey:     encryptionKey,
+		logger:            logger,
+		awsExecutor:       NewAWSExecutor(logger),
+		azureExecutor:     NewAzureExecutor(logger),
+	}
 }
 
 // ProposeAction creates a new remediation action and checks auto-approval rules.
@@ -320,8 +343,7 @@ func (e *Executor) matchesRule(action *model.RemediationAction, rule *model.Auto
 	return true
 }
 
-// executeAction simulates executing a remediation action.
-// TODO: Replace with real AWS API calls (ec2.ModifyInstanceAttribute, ec2.StopInstances, etc.)
+// executeAction dispatches to real cloud provider APIs.
 func (e *Executor) executeAction(ctx context.Context, action *model.RemediationAction) error {
 	e.logger.Info("executing remediation action",
 		"type", action.Type,
@@ -330,42 +352,96 @@ func (e *Executor) executeAction(ctx context.Context, action *model.RemediationA
 		"region", action.Region,
 	)
 
-	switch action.Type {
-	case model.RemediationTypeResizeInstance:
-		return e.simulateExecution(ctx, action, "Resized instance")
-	case model.RemediationTypeStopInstance:
-		return e.simulateExecution(ctx, action, "Stopped instance")
-	case model.RemediationTypeTerminateInstance:
-		return e.simulateExecution(ctx, action, "Terminated instance")
-	case model.RemediationTypeDeleteVolume:
-		return e.simulateExecution(ctx, action, "Deleted EBS volume")
-	case model.RemediationTypeUpgradeStorage:
-		return e.simulateExecution(ctx, action, "Upgraded storage type")
-	case model.RemediationTypeApplyLifecyclePolicy:
-		return e.simulateExecution(ctx, action, "Applied S3 lifecycle policy")
-	case model.RemediationTypeReleaseEIP:
-		return e.simulateExecution(ctx, action, "Released Elastic IP")
-	case model.RemediationTypeDeleteSnapshot:
-		return e.simulateExecution(ctx, action, "Deleted old snapshot")
+	switch action.Provider {
+	case model.CloudProviderAWS:
+		creds, err := e.getAWSCreds(ctx, action.OrganizationID)
+		if err != nil {
+			return fmt.Errorf("failed to get AWS credentials: %w", err)
+		}
+		return e.awsExecutor.Execute(ctx, action, creds)
+
+	case model.CloudProviderAzure:
+		creds, err := e.getAzureCreds(ctx, action.OrganizationID)
+		if err != nil {
+			return fmt.Errorf("failed to get Azure credentials: %w", err)
+		}
+		return e.azureExecutor.Execute(ctx, action, creds)
+
 	default:
-		return fmt.Errorf("unsupported remediation type: %s", action.Type)
+		return fmt.Errorf("unsupported provider for remediation: %s", action.Provider)
 	}
 }
 
-func (e *Executor) simulateExecution(_ context.Context, action *model.RemediationAction, msg string) error {
-	// Simulate a brief execution delay
-	time.Sleep(100 * time.Millisecond)
-	e.logger.Info(msg, "resource_id", action.ResourceID, "region", action.Region)
-	return nil
-}
-
-// rollbackAction simulates rolling back a remediation action.
+// rollbackAction dispatches rollback to real cloud provider APIs.
 func (e *Executor) rollbackAction(ctx context.Context, action *model.RemediationAction) error {
 	e.logger.Info("rolling back remediation action",
 		"type", action.Type,
+		"provider", action.Provider,
 		"resource", action.ResourceID,
 	)
-	// Simulate rollback
-	time.Sleep(100 * time.Millisecond)
-	return nil
+
+	switch action.Provider {
+	case model.CloudProviderAWS:
+		creds, err := e.getAWSCreds(ctx, action.OrganizationID)
+		if err != nil {
+			return fmt.Errorf("failed to get AWS credentials for rollback: %w", err)
+		}
+		return e.awsExecutor.Rollback(ctx, action, creds)
+
+	case model.CloudProviderAzure:
+		creds, err := e.getAzureCreds(ctx, action.OrganizationID)
+		if err != nil {
+			return fmt.Errorf("failed to get Azure credentials for rollback: %w", err)
+		}
+		return e.azureExecutor.Rollback(ctx, action, creds)
+
+	default:
+		return fmt.Errorf("unsupported provider for rollback: %s", action.Provider)
+	}
+}
+
+func (e *Executor) getAWSCreds(ctx context.Context, orgID uuid.UUID) (*AWSCreds, error) {
+	if e.cloudProviderRepo == nil || e.encryptionKey == "" {
+		return nil, fmt.Errorf("cloud provider repository or encryption key not configured")
+	}
+
+	cp, err := e.cloudProviderRepo.GetByOrgAndType(ctx, orgID, model.CloudProviderAWS)
+	if err != nil {
+		return nil, fmt.Errorf("no AWS provider configured for org: %w", err)
+	}
+
+	key := crypto.DeriveKey(e.encryptionKey)
+	plaintext, err := crypto.Decrypt(cp.Credentials, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt AWS credentials: %w", err)
+	}
+
+	var creds AWSCreds
+	if err := json.Unmarshal(plaintext, &creds); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal AWS credentials: %w", err)
+	}
+	return &creds, nil
+}
+
+func (e *Executor) getAzureCreds(ctx context.Context, orgID uuid.UUID) (*AzureCreds, error) {
+	if e.cloudProviderRepo == nil || e.encryptionKey == "" {
+		return nil, fmt.Errorf("cloud provider repository or encryption key not configured")
+	}
+
+	cp, err := e.cloudProviderRepo.GetByOrgAndType(ctx, orgID, model.CloudProviderAzure)
+	if err != nil {
+		return nil, fmt.Errorf("no Azure provider configured for org: %w", err)
+	}
+
+	key := crypto.DeriveKey(e.encryptionKey)
+	plaintext, err := crypto.Decrypt(cp.Credentials, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt Azure credentials: %w", err)
+	}
+
+	var creds AzureCreds
+	if err := json.Unmarshal(plaintext, &creds); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal Azure credentials: %w", err)
+	}
+	return &creds, nil
 }

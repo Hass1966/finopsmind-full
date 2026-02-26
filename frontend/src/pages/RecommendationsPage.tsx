@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  DollarSign, Lightbulb, ArrowUpRight, CheckCircle, Check, Filter
+  DollarSign, Lightbulb, ArrowUpRight, CheckCircle, Check, Filter,
+  Download, FileCode, GitBranch
 } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
@@ -14,6 +15,81 @@ export default function RecommendationsPage() {
   const queryClient = useQueryClient()
   const [typeFilter, setTypeFilter] = useState('all')
   const [impactFilter, setImpactFilter] = useState('all')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
+
+  const selectAll = () => {
+    if (selectedIds.length === filteredRecs.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredRecs.map(r => r.id))
+    }
+  }
+
+  const handleBulkExport = async () => {
+    if (selectedIds.length === 0) return
+    try {
+      const response = await fetch('/api/v1/recommendations/terraform/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      })
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'finopsmind-remediation.zip'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export failed:', err)
+    }
+  }
+
+  const handleGenerateScript = async (id: string) => {
+    try {
+      const response = await fetch(`/api/v1/recommendations/${id}/script`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      })
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `remediate_${id}.sh`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Script generation failed:', err)
+    }
+  }
+
+  const handleGeneratePipeline = async (id: string) => {
+    try {
+      const response = await fetch(`/api/v1/recommendations/${id}/terraform/plan?type=github`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      })
+      const data = await response.json()
+      const blob = new Blob([data.pipeline], { type: 'text/yaml' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `github-actions-${id}.yml`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Pipeline generation failed:', err)
+    }
+  }
 
   const { data: recommendationsData, isLoading } = useQuery<{ data: Recommendation[] }>({
     queryKey: ['recommendations'],
@@ -92,6 +168,12 @@ export default function RecommendationsPage() {
             <option value="low">Low</option>
           </select>
           <span className="text-sm text-gray-500 ml-auto">{filteredRecs.length} recommendations</span>
+          {selectedIds.length > 0 && (
+            <button onClick={handleBulkExport}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <Download size={16} /> Export {selectedIds.length} as Terraform
+            </button>
+          )}
         </div>
       </div>
 
@@ -100,6 +182,10 @@ export default function RecommendationsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-6 py-4">
+                  <input type="checkbox" checked={selectedIds.length === filteredRecs.length && filteredRecs.length > 0}
+                    onChange={selectAll} className="rounded border-gray-300" />
+                </th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Resource</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Type</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Current</th>
@@ -114,6 +200,10 @@ export default function RecommendationsPage() {
               {filteredRecs.map(rec => (
                 <tr key={rec.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
+                    <input type="checkbox" checked={selectedIds.includes(rec.id)}
+                      onChange={() => toggleSelect(rec.id)} className="rounded border-gray-300" />
+                  </td>
+                  <td className="px-6 py-4">
                     <div>
                       <p className="font-medium text-sm">{rec.resource_type}</p>
                       <p className="text-xs text-gray-500 font-mono">{rec.resource_id}</p>
@@ -126,16 +216,28 @@ export default function RecommendationsPage() {
                   <td className="px-6 py-4"><ImpactBadge impact={rec.impact} /></td>
                   <td className="px-6 py-4"><StatusBadge status={rec.status} /></td>
                   <td className="px-6 py-4">
-                    {rec.status === 'open' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => updateMutation.mutate({ id: rec.id, status: 'implemented' })}
-                          className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 flex items-center gap-1">
-                          <Check size={12} /> Implement
-                        </button>
-                        <button onClick={() => updateMutation.mutate({ id: rec.id, status: 'dismissed' })}
-                          className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200">Dismiss</button>
-                      </div>
-                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      {rec.status === 'open' && (
+                        <>
+                          <button onClick={() => updateMutation.mutate({ id: rec.id, status: 'implemented' })}
+                            className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 flex items-center gap-1">
+                            <Check size={12} /> Implement
+                          </button>
+                          <button onClick={() => updateMutation.mutate({ id: rec.id, status: 'dismissed' })}
+                            className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200">Dismiss</button>
+                        </>
+                      )}
+                      <button onClick={() => handleGenerateScript(rec.id)}
+                        className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded hover:bg-purple-200 flex items-center gap-1"
+                        title="Download shell script">
+                        <FileCode size={12} /> Script
+                      </button>
+                      <button onClick={() => handleGeneratePipeline(rec.id)}
+                        className="text-xs px-2 py-1 bg-indigo-100 text-indigo-800 rounded hover:bg-indigo-200 flex items-center gap-1"
+                        title="Generate CI/CD pipeline">
+                        <GitBranch size={12} /> Pipeline
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

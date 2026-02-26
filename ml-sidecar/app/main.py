@@ -289,10 +289,13 @@ async def health():
     """Detailed health check."""
     return {
         "status": "healthy",
-        "components": {
-            "classifier": "ok",
-            "optimizer": "ok",
-            "architecture": "ok",
+        "version": "0.5.0",
+        "models": {
+            "classifier": True,
+            "optimizer": True,
+            "architecture": True,
+            "forecast": True,
+            "anomaly_detection": True,
         },
     }
 
@@ -607,6 +610,249 @@ async def analyze_architecture(request: ArchitectureAnalyzeRequest):
         
     except Exception as e:
         logger.error(f"Architecture analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Forecast & Anomaly Detection Models (for Go mlclient)
+# ============================================================================
+
+class CostDataPointRequest(BaseModel):
+    """Cost data point for forecast/anomaly detection."""
+    date: str
+    amount: float
+
+
+class ForecastAPIRequest(BaseModel):
+    """Request for cost forecasting (matches Go mlclient.ForecastRequest)."""
+    organization_id: str
+    historical_days: int = 90
+    forecast_days: int = 30
+    granularity: str = "daily"
+    service_filter: Optional[str] = None
+    account_filter: Optional[str] = None
+    data: List[CostDataPointRequest] = []
+
+
+class ForecastPointResponse(BaseModel):
+    """Single forecast data point."""
+    date: str
+    predicted: float
+    lower_bound: float
+    upper_bound: float
+
+
+class ForecastAPIResponse(BaseModel):
+    """Response for cost forecasting (matches Go model.ForecastResponse)."""
+    organization_id: str
+    generated_at: str
+    model_version: str
+    forecasts: List[ForecastPointResponse]
+    total_forecasted: float
+    confidence_level: float
+
+
+class AnomalyDetectRequest(BaseModel):
+    """Request for anomaly detection (matches Go mlclient.AnomalyDetectionRequest)."""
+    organization_id: str
+    data: List[CostDataPointRequest]
+    sensitivity: float = 0.1
+
+
+class AnomalyItem(BaseModel):
+    """Single detected anomaly."""
+    date: str
+    actual_amount: float
+    expected_amount: float
+    deviation: float
+    deviation_pct: float
+    score: float
+    severity: str
+
+
+class AnomalyDetectResponse(BaseModel):
+    """Response for anomaly detection (matches Go mlclient.AnomalyDetectionResponse)."""
+    organization_id: str
+    analyzed_at: str
+    model_version: str
+    anomalies: List[AnomalyItem]
+    total_analyzed: int
+    anomaly_count: int
+    threshold: float
+
+
+# ============================================================================
+# Forecast & Anomaly Detection Endpoints
+# ============================================================================
+
+@app.post("/api/v1/forecast", response_model=ForecastAPIResponse)
+async def forecast_costs(request: ForecastAPIRequest):
+    """
+    Generate cost forecast using Holt-Winters exponential smoothing.
+
+    Takes historical cost data and returns predicted costs with confidence intervals.
+    """
+    import numpy as np
+    from datetime import datetime, timedelta
+
+    try:
+        if len(request.data) < 7:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Need at least 7 data points, got {len(request.data)}"
+            )
+
+        # Sort data by date
+        sorted_data = sorted(request.data, key=lambda x: x.date)
+        amounts = np.array([d.amount for d in sorted_data])
+
+        # Holt-Winters double exponential smoothing
+        alpha = 0.3  # level smoothing
+        beta = 0.1   # trend smoothing
+
+        n = len(amounts)
+        level = np.zeros(n)
+        trend = np.zeros(n)
+
+        # Initialize
+        level[0] = amounts[0]
+        trend[0] = (amounts[min(6, n-1)] - amounts[0]) / min(6, n-1) if n > 1 else 0
+
+        for i in range(1, n):
+            level[i] = alpha * amounts[i] + (1 - alpha) * (level[i-1] + trend[i-1])
+            trend[i] = beta * (level[i] - level[i-1]) + (1 - beta) * trend[i-1]
+
+        # Calculate residuals for confidence intervals
+        residuals = amounts[1:] - (level[:-1] + trend[:-1])
+        std_residual = float(np.std(residuals)) if len(residuals) > 0 else amounts.std()
+
+        # Generate forecasts
+        forecast_days = min(request.forecast_days, 90)
+        last_date_str = sorted_data[-1].date
+        try:
+            last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
+        except ValueError:
+            last_date = datetime.strptime(last_date_str[:10], "%Y-%m-%d")
+
+        forecasts = []
+        total_forecasted = 0.0
+
+        for i in range(1, forecast_days + 1):
+            predicted = float(level[-1] + i * trend[-1])
+            predicted = max(predicted, 0)  # costs can't be negative
+
+            # Widen confidence interval with horizon
+            margin = 1.96 * std_residual * np.sqrt(i)
+            lower = max(predicted - margin, 0)
+            upper = predicted + margin
+
+            forecast_date = last_date + timedelta(days=i)
+            forecasts.append(ForecastPointResponse(
+                date=forecast_date.strftime("%Y-%m-%d"),
+                predicted=round(predicted, 2),
+                lower_bound=round(lower, 2),
+                upper_bound=round(upper, 2),
+            ))
+            total_forecasted += predicted
+
+        # Confidence based on data quality
+        confidence = min(0.95, 0.5 + 0.01 * min(n, 45))
+
+        return ForecastAPIResponse(
+            organization_id=request.organization_id,
+            generated_at=datetime.utcnow().isoformat() + "Z",
+            model_version="holt-winters-1.0",
+            forecasts=forecasts,
+            total_forecasted=round(total_forecasted, 2),
+            confidence_level=round(confidence, 2),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Forecast error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/anomalies/detect", response_model=AnomalyDetectResponse)
+async def detect_anomalies(request: AnomalyDetectRequest):
+    """
+    Detect cost anomalies using Z-score statistical detection with rolling statistics.
+
+    Identifies data points that deviate significantly from expected patterns.
+    """
+    import numpy as np
+    from datetime import datetime
+
+    try:
+        if len(request.data) < 7:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Need at least 7 data points, got {len(request.data)}"
+            )
+
+        # Sort data by date
+        sorted_data = sorted(request.data, key=lambda x: x.date)
+        amounts = np.array([d.amount for d in sorted_data])
+        n = len(amounts)
+
+        # Sensitivity maps to z-score threshold (lower sensitivity = higher threshold)
+        sensitivity = max(0.01, min(request.sensitivity, 0.5))
+        z_threshold = 3.0 - (sensitivity * 4.0)  # sensitivity 0.1 -> z=2.6, 0.5 -> z=1.0
+        z_threshold = max(z_threshold, 1.5)
+
+        # Rolling window statistics
+        window_size = min(14, n - 1)
+        anomalies = []
+
+        for i in range(window_size, n):
+            window = amounts[max(0, i - window_size):i]
+            mean = float(np.mean(window))
+            std = float(np.std(window))
+
+            if std < 0.01:
+                std = max(mean * 0.05, 1.0)  # minimum std for flat data
+
+            actual = float(amounts[i])
+            z_score = abs(actual - mean) / std
+            deviation = actual - mean
+            deviation_pct = (deviation / mean * 100) if mean > 0 else 0
+
+            if z_score >= z_threshold:
+                abs_pct = abs(deviation_pct)
+                if abs_pct >= 100:
+                    severity = "critical"
+                elif abs_pct >= 50:
+                    severity = "high"
+                elif abs_pct >= 25:
+                    severity = "medium"
+                else:
+                    severity = "low"
+
+                anomalies.append(AnomalyItem(
+                    date=sorted_data[i].date,
+                    actual_amount=round(actual, 2),
+                    expected_amount=round(mean, 2),
+                    deviation=round(deviation, 2),
+                    deviation_pct=round(deviation_pct, 1),
+                    score=round(z_score, 3),
+                    severity=severity,
+                ))
+
+        return AnomalyDetectResponse(
+            organization_id=request.organization_id,
+            analyzed_at=datetime.utcnow().isoformat() + "Z",
+            model_version="zscore-rolling-1.0",
+            anomalies=anomalies,
+            total_analyzed=n,
+            anomaly_count=len(anomalies),
+            threshold=round(z_threshold, 2),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Anomaly detection error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

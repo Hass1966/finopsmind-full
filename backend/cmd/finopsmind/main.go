@@ -102,9 +102,18 @@ func main() {
 	unitEconHandler := handler.NewUnitEconomicsHandler()
 	commitmentHandler := handler.NewCommitmentHandler()
 	driftHandler := handler.NewDriftHandler()
-	remediationExecutor := remediation.NewExecutor(ctr.RemediationRepository(), logger)
+	remediationExecutor := remediation.NewExecutorWithCloudAccess(ctr.RemediationRepository(), ctr.CloudProviderRepository(), cfg.EncryptionKey, logger)
 	remediationHandler := handler.NewRemediationHandler(remediationExecutor)
 	cloudProviderHandler := handler.NewCloudProviderHandler(ctr.CloudProviderRepository(), ctr.CostRepository(), cfg.EncryptionKey, logger)
+
+	// Real recommendation handler backed by engine + DB
+	recHandler := handler.NewRecommendationHandler(ctr.RecommendationEngine(), ctr.DBQuerier())
+
+	// Real forecast handler backed by DB
+	forecastHandler := handler.NewForecastDBHandler(ctr.ForecastRepository())
+
+	// Script export handler for terraform bulk/pipeline generation
+	scriptExportHandler := handler.NewScriptExportHandler(ctr.DBQuerier())
 
 	// Auth middleware
 	requireAuth := auth.Middleware(jwtMgr, ctr.UserRepository())
@@ -145,12 +154,24 @@ func main() {
 			r.Post("/anomalies/{id}/acknowledge", anomalyHandler.Acknowledge)
 			r.Post("/anomalies/{id}/resolve", anomalyHandler.Resolve)
 
-			// Recommendations (keep existing mock for now, will be wired to DB in Phase B)
-			r.Get("/recommendations", handler.GetRecommendations)
-			r.Patch("/recommendations/{id}", handler.UpdateRecommendation)
+			// Recommendations (real handler backed by DB + engine)
+			r.Route("/recommendations", func(r chi.Router) {
+				r.Get("/", recHandler.ListRecommendations)
+				r.Post("/generate", recHandler.GenerateRecommendations)
+				r.Get("/rules", recHandler.ListRules)
+				r.Get("/summary", recHandler.GetSummary)
+				r.Get("/{id}", recHandler.GetRecommendation)
+				r.Put("/{id}/status", recHandler.UpdateStatus)
+				r.Post("/{id}/dismiss", recHandler.DismissRecommendation)
+				r.Get("/{id}/terraform", recHandler.GetTerraform)
+				r.Get("/{id}/script", scriptExportHandler.GenerateScript)
+				r.Post("/{id}/terraform/plan", scriptExportHandler.GeneratePipeline)
+				r.Post("/terraform/bulk", scriptExportHandler.BulkExport)
+			})
 
-			// Forecasts
-			r.Get("/forecasts", handler.GetForecasts)
+			// Forecasts (real handler backed by DB)
+			r.Get("/forecasts", forecastHandler.List)
+			r.Get("/forecasts/latest", forecastHandler.GetLatest)
 
 			// Cloud Providers (multi-tenant)
 			r.Get("/providers", cloudProviderHandler.List)
