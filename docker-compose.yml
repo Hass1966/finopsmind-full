@@ -71,6 +71,7 @@ services:
       - JWT_SECRET=change-this-to-a-long-random-string-at-least-32-chars
       - REDIS_URL=redis://redis:6379
       - ENVIRONMENT=development
+      - ENCRYPTION_KEY=finopsmind-dev-encryption-key-32c
     ports:
       - "8080:8080"
     depends_on:
